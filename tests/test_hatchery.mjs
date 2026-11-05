@@ -44,11 +44,12 @@ test('hatchery journey still flies the aisle and closes on L3T6', () => {
   assert.match(main, /function goHatchery\(\)/);
   assert.match(main, /id === 'hatch'\) goHatchery/);
   assert.match(main, /HERO_TANK/);
+  const hatchery = main.slice(main.indexOf('function goHatchery'), main.indexOf('function larvaeCloseUp'));
   const larvae = main.slice(main.indexOf('function larvaeCloseUp'), main.indexOf('function goSeaCages'));
   assert.match(larvae, /HERO_TANK/);
   assert.match(larvae, /fly\(/);
-  assert.match(main, /show\('#lifecycle'/);
-  assert.match(main, /show\('#tank'/);
+  assert.match(larvae, /offerDetail\('tank'\)/);
+  assert.doesNotMatch(hatchery, /show\('#lifecycle'|show\('#tank'/);
   assert.match(main, /btnToHatch/);
   assert.match(main, /btnLarvae/);
 });
@@ -59,12 +60,13 @@ test('broodstock photoperiod and entry stay wired', () => {
   assert.match(main, /function enterBroodstock/);
   assert.match(main, /buildBrood/);
   assert.match(main, /setPP\(0\)/);
-  assert.match(main, /show\('#brood'/);
+  const entry = main.slice(main.indexOf('function enterBroodstock'), main.indexOf('function goHatchery'));
+  assert.doesNotMatch(entry, /show\('#brood'/);
 });
 
 test('dome, still sea, and hidden intro are untouched', () => {
   assert.match(exterior, /const domeX = -175, domeZ = 60;/);
-  assert.match(exterior, /vec2 dh=vec2\(0\.\); \/\/ Still water/);
+  assert.match(exterior, /the surface cannot ripple, foam, or shimmer/);
   assert.match(main, /else if \(id === 'dome'\)/);
   assert.doesNotMatch(main, /show\('#intro'/);
 });
