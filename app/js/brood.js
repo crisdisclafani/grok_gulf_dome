@@ -36,33 +36,49 @@ export function buildBrood(renderer, TIER) {
         c+=vec3(.55,.75,1.)*sp*1.2*uLight + vec3(.4,.6,.9)*fr*.6*uLight;
         gl_FragColor=vec4(c,.42+fr*.4); }`
   });
-  const TANKS = [];
-  for (const x of [-16, -4, 8]) for (const z of [-6, 6]) TANKS.push(new THREE.Vector3(x, 0, z));
-  const R = 3.2, TH = 1.4;
-  const outer = new THREE.CylinderGeometry(R, R, TH, 64, 1, true), inner = new THREE.CylinderGeometry(R - .08, R - .08, TH, 64, 1, true), rim = new THREE.TorusGeometry(R - .04, .07, 8, 64).rotateX(Math.PI / 2);
-  const bottom = new THREE.CircleGeometry(R - .08, 48).rotateX(-Math.PI / 2), surf = new THREE.CircleGeometry(R - .09, 64).rotateX(-Math.PI / 2);
+  // Two clusters of larger tanks with a service gap between them, in the spirit of the broodstock hall plan.
+  const CLUSTERS = [
+    { x: -20, z: -5.15, r: 4.05, h: 1.58 }, { x: -20, z: 5.15, r: 4.05, h: 1.58 },
+    { x: -10.2, z: -5.15, r: 4.05, h: 1.58 }, { x: -10.2, z: 5.15, r: 4.05, h: 1.58 },
+    { x: 7.2, z: -4.35, r: 3.5, h: 1.42 }, { x: 7.2, z: 4.75, r: 3.5, h: 1.42 },
+    { x: 15.4, z: 0.2, r: 3.65, h: 1.46 },
+  ];
+  const TANKS = CLUSTERS.map(c => new THREE.Vector3(c.x, 0, c.z));
+  const outer = new THREE.CylinderGeometry(1, 1, 1, 64, 1, true), inner = new THREE.CylinderGeometry(1, 1, 1, 64, 1, true), rim = new THREE.TorusGeometry(1, .02, 8, 64).rotateX(Math.PI / 2);
+  const bottom = new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2), surf = new THREE.CircleGeometry(1, 64).rotateX(-Math.PI / 2);
   const lights = [], leds = [], rays = [];
   const ledM = new THREE.MeshStandardMaterial({ color: '#000', emissive: '#cfe3ff', emissiveIntensity: 5 });
   const ray = shaftMaterial('#8fbaff', .1);
-  for (const c of TANKS) {
-    const g = new THREE.Group(); g.position.copy(c); scene.add(g);
-    const o = new THREE.Mesh(outer, tankW); o.position.y = TH / 2; const i = new THREE.Mesh(inner, tankIn); i.position.y = TH / 2;
-    const r = new THREE.Mesh(rim, tankW); r.position.y = TH; const b = new THREE.Mesh(bottom, tankIn); b.position.y = .03; b.material = tankIn.clone(); b.material.side = THREE.FrontSide;
-    const s = new THREE.Mesh(surf, waterM); s.position.y = TH - .16; s.renderOrder = 2;
-    g.add(o, i, r, b, s);
-    const L = new THREE.PointLight(0x9cc2ff, 26, 13, 1.6); L.position.set(c.x, 6.2, c.z); scene.add(L); lights.push(L);
-    const led = new THREE.Mesh(new THREE.BoxGeometry(5, .08, .22), ledM); led.position.set(c.x, 7.75, c.z); scene.add(led); leds.push(led);
-    const cone = new THREE.Mesh(new THREE.CylinderGeometry(.6, R * .95, 6.5, 40, 1, true), ray); cone.position.set(c.x, 7.7 - 3.25, c.z); scene.add(cone); rays.push(cone);
+  const pipeSteel = new THREE.MeshStandardMaterial({ color: '#d5dde3', metalness: .72, roughness: .3, envMapIntensity: .5 });
+  for (const c of CLUSTERS) {
+    const g = new THREE.Group(); g.position.set(c.x, 0, c.z); scene.add(g);
+    const o = new THREE.Mesh(outer, tankW); o.scale.set(c.r, c.h, c.r); o.position.y = c.h / 2;
+    const inn = new THREE.Mesh(inner, tankIn); inn.scale.set(c.r - .1, c.h, c.r - .1); inn.position.y = c.h / 2;
+    const r = new THREE.Mesh(rim, tankW); r.scale.setScalar(c.r); r.position.y = c.h;
+    const b = new THREE.Mesh(bottom, tankIn.clone()); b.material.side = THREE.FrontSide; b.scale.set(c.r - .12, 1, c.r - .12); b.position.y = .04;
+    const s = new THREE.Mesh(surf, waterM); s.scale.set(c.r - .14, 1, c.r - .14); s.position.y = c.h - .16; s.renderOrder = 2;
+    g.add(o, inn, r, b, s);
+    const L = new THREE.PointLight(0x9cc2ff, 24, c.r * 3.4, 1.6); L.position.set(c.x, 6.4, c.z); scene.add(L); lights.push(L);
+    const led = new THREE.Mesh(new THREE.BoxGeometry(c.r * 1.25, .08, .2), ledM); led.position.set(c.x, 7.75, c.z); scene.add(led); leds.push(led);
+    const cone = new THREE.Mesh(new THREE.CylinderGeometry(.15, 1, 1, 28, 1, true), ray);
+    cone.scale.set(c.r * .7, 6.1, c.r * .7); cone.position.set(c.x, 4.5, c.z); scene.add(cone); rays.push(cone);
+  }
+  const spine = new THREE.Mesh(new THREE.CylinderGeometry(.12, .12, 32, 14).rotateZ(Math.PI / 2), pipeSteel);
+  spine.position.set(-2, 4.35, 0); scene.add(spine);
+  for (const c of CLUSTERS) {
+    const top = 6.85, bot = c.h + .06, h = top - bot;
+    const drop = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, h, 8), pipeSteel);
+    drop.position.set(c.x, bot + h / 2, c.z); scene.add(drop);
   }
   // broodstock fish (seabream-like silver fish, no species claim) circling in each tank
   const geo = fishGeometry('bream', .8), mat = fishMaterial(fishTexture('bream'), { metalness: .35, roughness: .35, swim: 6, amp: .04 });
   mat.envMapIntensity = .6;
   const perTank = 7, fish = fishInstances(geo, mat, TANKS.length * perTank); scene.add(fish);
-  const F = []; TANKS.forEach((c, ti) => { for (let k = 0; k < perTank; k++) F.push({ c, a: Math.random() * 6.28, r: 1.2 + Math.random() * 1.6, y: .35 + Math.random() * .6, w: (.28 + Math.random() * .1) * (ti % 2 ? 1 : -1), s: .5 + Math.random() * .12, ph: Math.random() * 6 }); });
+  const F = []; CLUSTERS.forEach((c, ti) => { for (let k = 0; k < perTank; k++) F.push({ c, a: Math.random() * 6.28, r: c.r * (.32 + Math.random() * .46), y: .32 + Math.random() * (c.h * .5), w: (.22 + Math.random() * .08) * (ti % 2 ? 1 : -1), s: .52 + Math.random() * .16, ph: Math.random() * 6 }); });
   // bubbles from the aeration in each tank
   const NB = TIER > 1 ? 360 : 160;
   const bub = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshStandardMaterial({ color: '#dbefff', emissive: '#4f8fd8', emissiveIntensity: .6, roughness: .1, transparent: true, opacity: .55 }), NB);
-  const B = []; for (let i = 0; i < NB; i++) { const c = TANKS[i % TANKS.length], a = Math.random() * 6.28, r = Math.random() * .25; B.push({ c, x: Math.cos(a) * r + .6, z: Math.sin(a) * r - .4, y: Math.random() * 1.1, v: .25 + Math.random() * .25, s: .012 + Math.random() * .02, ph: Math.random() * 6 }); }
+  const B = []; for (let i = 0; i < NB; i++) { const c = CLUSTERS[i % CLUSTERS.length], a = Math.random() * 6.28, r = Math.random() * .3; B.push({ c, x: Math.cos(a) * r + c.r * .15, z: Math.sin(a) * r - c.r * .1, y: Math.random() * (c.h - .25), v: .25 + Math.random() * .25, s: .014 + Math.random() * .022, ph: Math.random() * 6 }); }
   bub.frustumCulled = false; scene.add(bub);
   const dust = driftPoints(TIER > 1 ? 1600 : 700, new THREE.Vector3(40, 8, 30), pointsMaterial({ color: '#bcd6ff', size: 1.3, opacity: .45 })); scene.add(dust);
 
@@ -83,7 +99,7 @@ export function buildBrood(renderer, TIER) {
       dm.updateMatrix(); fish.setMatrixAt(i, dm.matrix);
     });
     fish.instanceMatrix.needsUpdate = true;
-    B.forEach((b, i) => { const y = (b.y + t * b.v) % 1.15; dm.position.set(b.c.x + b.x + Math.sin(t * 3 + b.ph) * .03, .05 + y, b.c.z + b.z); dm.rotation.set(0, 0, 0); dm.scale.setScalar(b.s * (1 + y * .4)); dm.updateMatrix(); bub.setMatrixAt(i, dm.matrix); });
+    B.forEach((b, i) => { const y = (b.y + t * b.v) % Math.max(.4, b.c.h - .2); dm.position.set(b.c.x + b.x + Math.sin(t * 3 + b.ph) * .03, .05 + y, b.c.z + b.z); dm.rotation.set(0, 0, 0); dm.scale.setScalar(b.s * (1 + y * .35)); dm.updateMatrix(); bub.setMatrixAt(i, dm.matrix); });
     bub.instanceMatrix.needsUpdate = true;
   }
   return { scene, update, setPhoto, tanks: TANKS, exposure: 1.05, bloom: .42, bloomThreshold: .75, bloomRadius: .6, near: .05, far: 200, hotspots: [] };
