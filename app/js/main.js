@@ -153,7 +153,7 @@ function goCampus() {
   hideAll(); state.cagesMode = false; selectHS(null);
   const go = () => { useWorld(EXT); extSway = 2.2; place(V(-330, 210, 330), V(-40, 0, -20), 40); fly([V(-290, 175, 270)], [V(-35, 0, -25)], 10, 'sine.out'); showHotspots(true); };
   if (W !== EXT || state.where !== 'campus') veilSwap(go); else go();
-  state.where = 'campus'; setCrumb([{ k: 'crCampus' }]); setLevel(1, 'lv1'); setNav('campus');
+  state.where = 'campus'; setCrumb([{ k: 'crCampus' }]); setLevel(1, 'lv1'); setNav('campus'); $('#crumb').title = t('crCampus') + ' · ' + t('start');
 }
 function enterBroodstock() {
   hideAll(); selectHS('brood'); state.where = 'brood';
@@ -272,13 +272,16 @@ function onHotspot(id) {
   if (id === 'brood') enterBroodstock();
   else if (id === 'hatch') goHatchery();
   else if (id === 'labs' || id === 'ras') { selectHS(id); const h = HS.find(x => x.id === id); fly([V(h.pos.x - 80, 60, h.pos.z + 90)], [h.pos.clone().setY(G + 4)], 2.6); toast(id === 'labs' ? 'toastLabs' : 'toastRas', 4); }
-  else if (id === 'dome') { hide('#intro'); selectHS(id); const h = HS.find(x => x.id === id); fly([V(h.pos.x - 72, 52, h.pos.z + 82)], [h.pos.clone().setY(G + 6)], 2.6, 'power2.inOut', { fov: 40 }); toast('toastDome', 4); }
+  else if (id === 'dome') { hide('#intro'); selectHS(id); const h = HS.find(x => x.id === id); fly([V(h.pos.x - 90, 105, h.pos.z + 100)], [h.pos.clone().setY(G + 6)], 2.6, 'power2.inOut', { fov: 40 }); toast('toastDome', 4); }
   else if (id === 'cages') goSeaCages();
   else if (id === 'c03') diveCage();
   else if (id === 'l3t6') larvaeCloseUp();
 }
 $('#btnStart').onclick = () => enterBroodstock();
 $('#btnFree').onclick = () => { hide('#intro'); toast('toastFree'); };
+$('#crumb').addEventListener('dblclick', () => { if (state.where === 'campus') enterBroodstock(); });
+let campusTap = null;
+$('#crumb').addEventListener('click', () => { if (state.where !== 'campus') return; if (campusTap) { clearTimeout(campusTap); campusTap = null; enterBroodstock(); } else campusTap = setTimeout(() => campusTap = null, 320); });
 $('#btnToHatch').onclick = goHatchery; $('#btnLarvae').onclick = larvaeCloseUp; $('#btnToCages').onclick = goSeaCages; $('#btnDive').onclick = diveCage;
 $('#btnNext').onclick = nextFish; $('#btnAR').onclick = () => toast('toastAR');
 $('#btnLangCard').onclick = () => setLang(lang === 'ar' ? 'en' : 'ar');

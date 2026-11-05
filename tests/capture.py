@@ -19,7 +19,13 @@ with sync_playwright() as p:
         dome = page.locator('#hotspots .hs[data-id=dome]')
         assert dome.count() == 1, f'{name}: dome pin missing from scene'
         assert not page.locator('#intro').is_visible(), f'{name}: intro panel still blocks the campus'
-        if mobile:
+        if not dome.is_visible():
+            page.mouse.move(width * .5, height * .5)
+            page.mouse.down()
+            page.mouse.move(width * .88, height * .18, steps=18)
+            page.mouse.up()
+            page.evaluate('window.__advance(60)')
+            page.evaluate('window.__frame(0)')
             page.screenshot(path=str(ROOT / f'{name}-aerial-explore.png'))
         assert dome.is_visible(), f'{name}: dome pin not visible'
         dome.click()

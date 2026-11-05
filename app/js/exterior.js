@@ -170,7 +170,7 @@ export function buildExterior(renderer) {
   for (const s of [1, -1]) { add(new THREE.BoxGeometry(.4, .3, 470), kerb, -62 + s * 5.7, G + .15, -10, false); }
   // Visitor centre dome — concept geometry from the client's aerial render.
   // Entire plaza is inside the compound and inland of shoreX(20) = 82.56; no shed overlap.
-  const domeX = -25, domeZ = 20;
+  const domeX = -175, domeZ = 60;
   const domeWhite = new THREE.MeshStandardMaterial({ color: '#f8f8f5', roughness: .48, metalness: .03 });
   const domeRib = new THREE.MeshStandardMaterial({ color: '#deded9', roughness: .62, metalness: .04 });
   const plaza = add(new THREE.CircleGeometry(36, 64).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#d7d5cf', roughness: .9 }), domeX, G + .16, domeZ, false);
@@ -230,6 +230,9 @@ export function buildExterior(renderer) {
   for (let i = 0; i < 70; i++) { const x = -40 + Math.random() * 80, z = -40 + Math.random() * 6; S.push([x, z - 5]); }
   for (let i = 0; i < 40; i++) T.push([-160 + Math.random() * 90, 60 + Math.random() * 10]);
   for (let i = 0; i < 30; i++) S.push([-150 + Math.random() * 70, 150 + Math.random() * 12]);
+  // Keep the visitor dome's dedicated plot completely clear, including procedural landscaping.
+  for (let i = T.length - 1; i >= 0; i--) if (Math.hypot(T[i][0] - domeX, T[i][1] - domeZ) < 44) T.splice(i, 1);
+  for (let i = S.length - 1; i >= 0; i--) if (Math.hypot(S[i][0] - domeX, S[i][1] - domeZ) < 44) S.splice(i, 1);
   const dm = new THREE.Object3D();
   const shrubs = new THREE.InstancedMesh(shrubG, green, S.length);
   S.forEach(([x, z], i) => { dm.position.set(x, G + .9, z); dm.scale.set(1.6 + Math.random(), 1.1 + Math.random() * .5, 1.6 + Math.random()); dm.rotation.y = Math.random() * 6; dm.updateMatrix(); shrubs.setMatrixAt(i, dm.matrix); });

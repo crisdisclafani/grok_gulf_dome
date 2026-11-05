@@ -4,7 +4,7 @@ A local mirror of the live Kriswa interactive campus demo, with only one additio
 
 - Open `app/index.html` through a static web server.
 - Source: https://www.kriswa.net/demos/gulf_aquaculture/3/app/index.html
-- Dome world position: `x=-25, z=20`, ground level `G=1.6`.
+- Dome world position: `x=-175, z=60`, ground level `G=1.6`.
 - The dome interior is intentionally not built yet.
 
 ## Checks
