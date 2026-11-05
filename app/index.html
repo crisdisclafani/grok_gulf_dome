@@ -18,7 +18,10 @@
 <div id="hotspots"></div>
 <div id="fishTag" class="fishtag"><i></i><div class="hl"><b data-t="fishTag">Hamour</b><span data-t="fishTagSub">Tap to discover</span></div></div>
 
-<header class="top glass">
+<button type="button" id="homeBtn" class="home-float" hidden><span class="home-arrow" aria-hidden="true">‹</span><span data-t="navCampus">Campus</span></button>
+<div class="lang-float"><div class="lang" id="langToggle"><button data-l="en" class="on">EN</button><button data-l="ar" class="ar">عربي</button></div></div>
+
+<header class="top glass" hidden>
   <div class="brand">
     <div class="mark"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M2 12c2.5-3 5-3 7.5 0s5 3 8.5-1" fill="none" stroke="#0E3B5C" stroke-width="1.4"/><path d="M2 8c2.5-3 5-3 7.5 0s5 3 8.5-1" fill="none" stroke="#B39257" stroke-width="1.1"/></svg></div>
     <div><b data-t="brand">Egg to Harvest</b><span data-t="brandSub">Sheikh Khalifa Marine Research Centre · Interactive journey</span></div>
@@ -28,7 +31,6 @@
   </nav>
   <div class="tools">
     <span class="tag concept-tag" data-t="conceptTag">Concept demo</span>
-    <div class="lang" id="langToggle"><button data-l="en" class="on">EN</button><button data-l="ar" class="ar">عربي</button></div>
   </div>
 </header>
 
@@ -144,6 +146,9 @@
 <div id="levels" class="levels glass"><div class="dots" id="dots"></div><span id="levelTxt"></span></div>
 <div id="conceptNote" class="concept glass"><em data-t="conceptTag">Concept demo</em> · <span data-t="conceptSub">real-time 3D in the browser</span></div>
 <div id="toast" class="toast glass"></div>
+<button type="button" id="detailChip" class="detail-chip glass" hidden aria-expanded="false">
+  <b id="detailTitle"></b><span id="detailHint" data-t="detailMore">Details</span>
+</button>
 
 <!-- end card -->
 <section id="endcard">

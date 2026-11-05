@@ -73,7 +73,7 @@ function applyLang(l) {
   document.querySelectorAll('#langToggle button').forEach(b => b.classList.toggle('on', b.dataset.l === l));
   $('#btnLangCard').innerHTML = l === 'ar' ? '<span>EN</span>' : '<span class="ar">عربي</span>';
   $('#planImg').alt = t('phase1Title');
-  buildHotspots(currentHS); renderCrumb(); renderLevel(); setPP(pp, true);
+  buildHotspots(currentHS); renderCrumb(); renderLevel(); setPP(pp, true); syncDetailCopy();
 }
 
 // ---------------- hotspots ----------------
@@ -133,9 +133,47 @@ function setNav(k) { document.querySelectorAll('#nav a').forEach(a => a.classLis
 
 // ---------------- panels ----------------
 const shown = new Set();
-function show(sel, from = { y: 18 }, d = 0) { const el = $(sel); shown.add(sel); gsap.killTweensOf(el); return gsap.fromTo(el, { autoAlpha: 0, x: 0, y: 0, ...from }, { autoAlpha: 1, x: 0, y: 0, duration: .8, delay: d, ease: 'power3.out' }); }
-function hide(sel, d = 0) { const el = $(sel); shown.delete(sel); gsap.killTweensOf(el); return gsap.to(el, { autoAlpha: 0, duration: .35, delay: d, ease: 'power2.in' }); }
-function hideAll(except = []) { [...shown].forEach(s => { if (!except.includes(s)) hide(s); }); }
+function show(sel, from = { y: 18 }, d = 0) { const el = $(sel); shown.add(sel); el.style.pointerEvents = 'auto'; gsap.killTweensOf(el); return gsap.fromTo(el, { autoAlpha: 0, x: 0, y: 0, ...from }, { autoAlpha: 1, x: 0, y: 0, duration: .8, delay: d, ease: 'power3.out' }); }
+function hide(sel, d = 0) { const el = $(sel); shown.delete(sel); el.style.pointerEvents = 'none'; gsap.killTweensOf(el); return gsap.to(el, { autoAlpha: 0, duration: .35, delay: d, ease: 'power2.in' }); }
+function hideAll(except = []) { [...shown].forEach(s => { if (!except.includes(s)) hide(s); }); clearDetail(); }
+const DETAIL = { tank: { title: 'crL3T6', panel: '#tank' }, cage: { title: 'crC03', panel: '#cages' }, fish: { title: 'fishCard', panel: '#card' } };
+let detailKind = null, detailOpen = false, tankCounted = false;
+function syncDetailCopy() {
+  if (!detailKind || !$('#detailChip')) return;
+  $('#detailTitle').textContent = t(DETAIL[detailKind].title);
+  $('#detailHint').textContent = t(detailOpen ? 'detailLess' : 'detailMore');
+  $('#detailHint').dataset.t = detailOpen ? 'detailLess' : 'detailMore';
+}
+function clearDetail() {
+  detailKind = null; detailOpen = false; const chip = $('#detailChip');
+  if (!chip) return;
+  chip.hidden = true; chip.classList.remove('open'); chip.setAttribute('aria-expanded', 'false');
+  ['#tank', '#cages', '#card'].forEach(s => { if (shown.has(s)) hide(s); });
+}
+function offerDetail(kind) {
+  const chip = $('#detailChip');
+  if (detailKind === kind && chip && !chip.hidden) { syncDetailCopy(); return; }
+  detailKind = kind; detailOpen = false;
+  chip.hidden = false; chip.classList.remove('open'); chip.setAttribute('aria-expanded', 'false');
+  ['#tank', '#cages', '#card'].forEach(s => { if (shown.has(s)) hide(s); });
+  syncDetailCopy();
+}
+function toggleDetail() {
+  if (!detailKind) return;
+  detailOpen = !detailOpen;
+  const chip = $('#detailChip'), sel = DETAIL[detailKind].panel;
+  chip.classList.toggle('open', detailOpen); chip.setAttribute('aria-expanded', detailOpen ? 'true' : 'false');
+  if (detailOpen) {
+    show(sel, { y: 12 });
+    if (detailKind === 'tank' && !tankCounted) {
+      tankCounted = true;
+      count($('#cStocked'), 750000); count($('#cHatched'), 580000, 1.8); count($('#cUnhatched'), 170000, 1.8);
+      gsap.fromTo('#rateBar', { width: '0%' }, { width: (580 / 750 * 100).toFixed(1) + '%', duration: 1.8, ease: 'power2.out' });
+    }
+  } else hide(sel);
+  syncDetailCopy();
+}
+function syncHome() { const b = $('#homeBtn'); if (b) b.hidden = state.where === 'campus'; }
 function toast(k, dur = 3.2) { const el = $('#toast'); el.textContent = t(k); gsap.killTweensOf(el); gsap.timeline().fromTo(el, { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: .4 }).to(el, { autoAlpha: 0, duration: .4 }, dur); }
 const veil = $('#veil');
 function veilSwap(fn, inD = .45, outD = .65) {
@@ -162,7 +200,7 @@ function goCampus() {
   hideAll(); state.cagesMode = false; selectHS(null);
   const go = () => { useWorld(EXT); extSway = 0; stopOrbit(); place(V(-290, 175, 270), V(-35, 0, -25), 40); applyCamera(0); showHotspots(true); startOrbit(); };
   if (W !== EXT || state.where !== 'campus') veilSwap(go); else go();
-  state.where = 'campus'; setCrumb([{ k: 'crCampus' }]); setLevel(1, 'lv1'); setNav('campus'); $('#crumb').title = t('crCampus') + ' · ' + t('start');
+  state.where = 'campus'; setCrumb([{ k: 'crCampus' }]); setLevel(1, 'lv1'); setNav('campus'); $('#crumb').title = t('crCampus') + ' · ' + t('start'); syncHome();
 }
 function enterBroodstock() {
   hideAll(); selectHS('brood'); state.where = 'brood';
@@ -171,13 +209,14 @@ function enterBroodstock() {
     useWorld(BRD); setPP(0);
     place(V(29, 2.3, 1.5), V(0, 1.4, 0), 44);
     fly([V(21, 3.0, 6), V(13, 3.7, 10.5)], [V(4, 1.2, 1), V(-6, .8, -1.5)], 5.2, 'power2.out', { sway: 1 });
-    setLevel(3, 'lv3'); show('#brood', { x: lang === 'ar' ? -40 : 40 }, 1.2);
+    setLevel(3, 'lv3');
   };
   if (W === EXT) {
     showHotspots(false);
     fly([V(-150, 115, 215), V(-20, 46, 140), V(-6, 16, 96)], [V(-20, 0, 10), V(-5, 4, 40), V(-5, 5, 42)], 4.4, 'power2.inOut', { fov: 44 });
     gsap.delayedCall(3.7, () => veilSwap(inside, .45, .7));
   } else veilSwap(inside);
+  syncHome();
 }
 function goHatchery() {
   hideAll(); state.where = 'hatch';
@@ -189,17 +228,12 @@ function goHatchery() {
     place(V3(A.place), V3(A.look), A.fov0);
     fly(A.pts.map(V3), A.tgts.map(V3), HATCH_APPROACH.dur, 'power2.inOut', { fov: A.fov1, sway: .7 });
     showHotspots(true);
-    show('#lifecycle', { y: -14 }, .8); show('#tank', { x: lang === 'ar' ? -40 : 40 }, 1.3);
-    gsap.delayedCall(1.3, () => {
-      document.querySelectorAll('.lc-step').forEach((s, i) => { s.classList.toggle('done', i < 1); s.classList.toggle('on', i === 1); });
-      gsap.fromTo('#lcFill', { width: '0%' }, { width: '33%', duration: 1.2, ease: 'power2.out' });
-      count($('#cStocked'), 750000); count($('#cHatched'), 580000, 1.8); count($('#cUnhatched'), 170000, 1.8);
-      gsap.fromTo('#rateBar', { width: '0%' }, { width: (580 / 750 * 100).toFixed(1) + '%', duration: 1.8, ease: 'power2.out' });
-    });
   });
+  syncHome();
 }
 function larvaeCloseUp() {
   showHotspots(false);
+  offerDetail('tank');
   const h = HERO_TANK;
   fly(
     [V(h.x - 2.55, 2.2, h.z + 3.55), V(h.x - 0.82, MOBILE ? 2.05 : 1.56, h.z + 1.42)],
@@ -215,8 +249,9 @@ function goSeaCages() {
     document.querySelectorAll('.lc-step').forEach((s, i) => { s.classList.toggle('done', i < 3); s.classList.toggle('on', i === 3); });
     place(V(-60, 70, 20), V(120, 0, -80), 46);
     fly([V(90, 55, -30), V(260, 38, -60), V(372, 24, -86)], [V(300, 0, -110), V(400, 0, -118), V(414, -1, -124)], 6.2, 'power1.inOut', { fov: 42 });
-    gsap.delayedCall(4.2, () => { showHotspots(true); selectHS('c03'); show('#cages', { x: lang === 'ar' ? -40 : 40 }); });
+    gsap.delayedCall(4.2, () => { showHotspots(true); selectHS('c03'); offerDetail('cage'); });
   });
+  syncHome();
 }
 function diveCage() {
   hideAll(); showHotspots(false); state.where = 'under';
@@ -225,8 +260,9 @@ function diveCage() {
   const C = HERO_CAGE; let crossed = false;
   fly([V(C.x - 3, 9, C.z + 15), V(C.x - 2, 1.2, C.z + 8.5), V(C.x - 2.5, -1.6, C.z + 7.5), V(C.x - 4, -4.4, C.z + 7)],
       [V(C.x, -1, C.z), V(C.x - .5, -2, C.z + 2), V(C.x + 1, -4.5, C.z), V(C.x + 3, -5, C.z - 2)], 5.4, 'power1.inOut',
-      { fov: 50, sway: .5, onUpdate() { if (!crossed && rig.pos.y < 0) { crossed = true; useWorld(UND); UND.burst(rig.pos.clone().sub(C).add(V(0, -.8, -1.2)), T); bokeh.enabled = false; show('#depth', { x: lang === 'ar' ? 20 : -20 }); } },
-        onComplete() { drift.a0 = Math.atan2(rig.pos.z - C.z, rig.pos.x - C.x); drift.t0 = T; drift.r = Math.hypot(rig.pos.x - C.x, rig.pos.z - C.z); drift.y = rig.pos.y; mode = 'drift'; show('#tapHint', { y: 10 }, .6); } });
+      { fov: 50, sway: .5, onUpdate() { if (!crossed && rig.pos.y < 0) { crossed = true; useWorld(UND); UND.burst(rig.pos.clone().sub(C).add(V(0, -.8, -1.2)), T); bokeh.enabled = false; } },
+        onComplete() { drift.a0 = Math.atan2(rig.pos.z - C.z, rig.pos.x - C.x); drift.t0 = T; drift.r = Math.hypot(rig.pos.x - C.x, rig.pos.z - C.z); drift.y = rig.pos.y; mode = 'drift'; } });
+  syncHome();
 }
 // ---- fish selection: ring, slow motion, follow camera with depth of field, fish card ----
 const fol = { k: 0, pos: V(0, 0, 0), tgt: V(0, 0, 0), side: 1 };
@@ -237,7 +273,7 @@ function pickFishNear(sx, sy) {
 }
 function selectFish(i) {
   if (i < 0) return;
-  const S = UND.state, first = S.sel < 0; S.sel = i;
+  const S = UND.state; S.sel = i;
   hide('#tapHint'); UND.ring.visible = true;
   gsap.fromTo(UND.ringM.uniforms.uA, { value: 0 }, { value: 1, duration: .8 });
   gsap.to(S, { timeScale: .32, duration: 1.4, ease: 'power2.out' });
@@ -246,7 +282,7 @@ function selectFish(i) {
   bokeh.enabled = true;
   show('#fishTag', { y: 8 }, .3);
   setLevel(7, 'lv7'); setCrumb([crumbCampus(), { k: 'crCages' }, { k: 'crC03' }, { k: 'crHamour' }]);
-  if (first) show('#card', { x: lang === 'ar' ? -70 : 70 }, 1.2);
+  offerDetail('fish');
 }
 const tv = V(0, 0, 0), fw = V(0, 0, 0), sd = V(0, 0, 0), up = V(0, 1, 0), wantP = V(0, 0, 0), wantT = V(0, 0, 0), camR = V(0, 0, 0);
 function updateFollow(dt) {
@@ -355,6 +391,8 @@ addEventListener('resize', () => { if (!$('#plan').hidden) fitPlan(); });
   stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
   stage.addEventListener('dblclick', fitPlan);
 }
+$('#homeBtn').onclick = () => goCampus();
+$('#detailChip').onclick = () => toggleDetail();
 $('#btnStart').onclick = () => enterBroodstock();
 $('#btnFree').onclick = () => { hide('#intro'); toast('toastFree'); };
 $('#crumb').addEventListener('dblclick', () => { if (state.where === 'campus') enterBroodstock(); });
@@ -398,30 +436,24 @@ function runDemo() {
   const tl = gsap.timeline();
   const C = (time, fn) => tl.call(fn, null, time);
   C(5.0, () => gsap.to(curEl, { autoAlpha: 1, duration: .4 }));
-  C(5.1, () => moveTo(() => center('#btnStart'), 1.2));
+  C(5.1, () => moveTo(() => center('.hs[data-id=brood]'), 1.2));
   C(6.5, () => press(null, enterBroodstock));
-  // broodstock: drag the photoperiod (really dims the hall), then back
-  C(16.6, () => moveTo(() => center('#ppKnob'), 1.1));
-  C(17.9, () => { press(null, () => {}); const o = { v: 0 }; gsap.to(o, { v: .78, duration: 1.9, ease: 'power1.inOut', onUpdate() { setPP(o.v); const c = center('#ppKnob'); cur.x = c.x; cur.y = c.y; curDraw(); } }); });
-  C(21.0, () => { const o = { v: .78 }; gsap.to(o, { v: 0, duration: 1.5, ease: 'power1.inOut', onUpdate() { setPP(o.v); const c = center('#ppKnob'); cur.x = c.x; cur.y = c.y; curDraw(); } }); });
-  C(23.0, () => moveTo(() => center('#btnToHatch'), 1.0));
-  C(24.2, () => press('#btnToHatch'));
-  C(31.4, () => moveTo(() => center('#btnLarvae'), 1.1));
-  C(32.6, () => press('#btnLarvae'));
-  C(38.4, () => moveTo(() => center('#btnToCages'), 1.0));
-  C(39.6, () => press('#btnToCages'));
-  C(47.0, () => moveTo(() => center('#btnDive'), 1.1));
-  C(48.3, () => press('#btnDive'));
+  // broodstock hall lighting still follows the photoperiod, without a panel on the view
+  C(17.9, () => { const o = { v: 0 }; gsap.to(o, { v: .78, duration: 1.9, ease: 'power1.inOut', onUpdate() { setPP(o.v); } }); });
+  C(21.0, () => { const o = { v: .78 }; gsap.to(o, { v: 0, duration: 1.5, ease: 'power1.inOut', onUpdate() { setPP(o.v); } }); });
+  C(24.2, () => goHatchery());
+  C(32.6, () => larvaeCloseUp());
+  C(39.6, () => goSeaCages());
+  C(48.3, () => diveCage());
   let fishI = -1;
   C(56.0, () => { fishI = heroFish(); moveTo(() => { pv.copy(UND.school.p[fishI]).project(camera); return { x: (pv.x * .5 + .5) * innerWidth, y: (-pv.y * .5 + .5) * innerHeight }; }, 1.3); });
   C(57.4, () => press(null, () => selectFish(fishI)));
   C(58.2, () => gsap.to(curEl, { autoAlpha: 0, duration: .5 }));
-  C(62.6, () => { gsap.to(curEl, { autoAlpha: 1, duration: .3 }); moveTo(() => center('#btnLangCard'), 1.1); });
-  C(63.9, () => press('#btnLangCard'));
+  C(62.6, () => { gsap.to(curEl, { autoAlpha: 1, duration: .3 }); moveTo(() => center('#langToggle button[data-l=ar]'), 1.1); });
+  C(63.9, () => press('#langToggle button[data-l=ar]'));
   C(68.6, () => moveTo(() => center('#langToggle button[data-l=en]'), 1.2));
   C(69.9, () => press('#langToggle button[data-l=en]'));
   C(71.0, () => gsap.to(curEl, { autoAlpha: 0, duration: .5 }));
-  C(72.4, () => showEnd());
   return tl;
 }
 export const DEMO_LENGTH = 82;

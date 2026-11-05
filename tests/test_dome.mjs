@@ -39,10 +39,9 @@ test('dome uses a white elliptical ribbed shell and ground-level glass', () => {
 });
 
 test('water shader has no time-driven waves, fish shadows or shoreline foam', () => {
-  assert.match(exterior, /vec2 dh=vec2\(0\.\); \/\/ Still water/);
-  assert.doesNotMatch(exterior, /W\(1\.,\.2|W\(-1\.,\.3|uTime\*\.02|d\*2\.2-uTime/);
+  assert.match(exterior, /the surface cannot ripple, foam, or shimmer/);
+  assert.doesNotMatch(exterior, /uTime|float foam/);
   assert.match(exterior, /float a=atan\(r\.y,r\.x\);/);
-  assert.match(exterior, /float foam=0\.0;/);
 });
 
 test('dome has English and Arabic labels and concept toast', () => {
