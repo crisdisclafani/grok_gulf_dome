@@ -38,6 +38,7 @@ html[dir=rtl] .crumb{left:auto;right:var(--pad);font-family:'Noto Naskh Arabic';
 .crumb i{color:var(--gold);font-style:normal}
 .crumb .on{background:var(--blue);color:var(--ivory);padding:1px 13px;border-radius:14px}
 
+#intro{display:none!important}
 .panel{position:fixed;top:164px;left:var(--pad);width:440px;padding:30px 32px;z-index:12;visibility:hidden;opacity:0}
 .panel.right{left:auto;right:var(--pad)}
 html[dir=rtl] .panel{left:auto;right:var(--pad)} html[dir=rtl] .panel.right{right:auto;left:var(--pad)}

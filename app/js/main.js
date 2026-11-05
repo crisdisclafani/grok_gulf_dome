@@ -153,7 +153,7 @@ function goCampus() {
   hideAll(); state.cagesMode = false; selectHS(null);
   const go = () => { useWorld(EXT); extSway = 2.2; place(V(-330, 210, 330), V(-40, 0, -20), 40); fly([V(-290, 175, 270)], [V(-35, 0, -25)], 10, 'sine.out'); showHotspots(true); };
   if (W !== EXT || state.where !== 'campus') veilSwap(go); else go();
-  state.where = 'campus'; setCrumb([{ k: 'crCampus' }]); setLevel(1, 'lv1'); setNav('campus'); show('#intro', { y: 18 }, .6);
+  state.where = 'campus'; setCrumb([{ k: 'crCampus' }]); setLevel(1, 'lv1'); setNav('campus');
 }
 function enterBroodstock() {
   hideAll(); selectHS('brood'); state.where = 'brood';
@@ -318,7 +318,7 @@ function runDemo() {
   const C = (time, fn) => tl.call(fn, null, time);
   C(5.0, () => gsap.to(curEl, { autoAlpha: 1, duration: .4 }));
   C(5.1, () => moveTo(() => center('#btnStart'), 1.2));
-  C(6.5, () => press('#btnStart'));
+  C(6.5, () => press(null, enterBroodstock));
   // broodstock: drag the photoperiod (really dims the hall), then back
   C(16.6, () => moveTo(() => center('#ppKnob'), 1.1));
   C(17.9, () => { press(null, () => {}); const o = { v: 0 }; gsap.to(o, { v: .78, duration: 1.9, ease: 'power1.inOut', onUpdate() { setPP(o.v); const c = center('#ppKnob'); cur.x = c.x; cur.y = c.y; curDraw(); } }); });

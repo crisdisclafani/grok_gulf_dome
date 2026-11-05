@@ -6,6 +6,7 @@ const root = new URL('../app/', import.meta.url);
 const exterior = fs.readFileSync(new URL('js/exterior.js', root), 'utf8');
 const i18n = fs.readFileSync(new URL('js/i18n.js', root), 'utf8');
 const main = fs.readFileSync(new URL('js/main.js', root), 'utf8');
+const css = fs.readFileSync(new URL('css/app.css', root), 'utf8');
 
 test('exterior has one visitor dome hotspot fully inland on the eastern plaza', () => {
   assert.match(exterior, /const domeX = -25, domeZ = 20;/);
@@ -50,4 +51,14 @@ test('dome hotspot selects, flies closer and shows concept toast without interio
   assert.match(block, /fly\(/);
   assert.match(block, /toast\('toastDome', 4\)/);
   assert.doesNotMatch(block, /buildBrood|buildHatch|veilSwap|useWorld/);
+});
+
+test('large intro panel never enters the initial campus view', () => {
+  assert.match(css, /#intro\s*\{[^}]*display:\s*none\s*!important/);
+  assert.doesNotMatch(main, /show\('#intro'/);
+});
+
+test('guided journey remains reachable from the existing facilities navigation', () => {
+  assert.match(main, /facilities:\s*enterBroodstock/);
+  assert.match(main, /C\(6\.5, \(\) => press\(null, enterBroodstock\)\)/);
 });
