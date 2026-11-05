@@ -15,9 +15,28 @@ test('phase 2 hatchery is a built interior, not a drawing', () => {
   assert.match(hatch, /whiteboard\.jpg/);
   assert.match(hatch, /TIER > 1 \? 20000 : 8000/);
   assert.match(hatch, /InstancedMesh/);
-  assert.doesNotMatch(hatch, /\.pdf|autocad|SITE PLAN/i);
-  assert.doesNotMatch(html, /\.pdf|autocad/i);
-  assert.doesNotMatch(main, /\.pdf|SITE PLAN/i);
+  assert.doesNotMatch(hatch, /\.pdf|autocad|SITE PLAN|phase1-ground-floor/i);
+  assert.doesNotMatch(main, /SITE PLAN/i);
+});
+
+test('laboratories opens the hosted Phase 1 sheet and adds no campus pin', () => {
+  const i18n = fs.readFileSync(new URL('js/i18n.js', root), 'utf8');
+  const labs = main.split("id === 'labs'")[1].split('else if')[0];
+  assert.match(labs, /fly\(/);
+  assert.match(labs, /openPhase1/);
+  assert.doesNotMatch(labs, /useWorld|goHatchery|toastLabs/);
+  assert.match(html, /docs\/phase1-ground-floor\.jpg/);
+  assert.match(html, /docs\/phase1-ground-floor\.pdf/);
+  assert.match(html, /id="plan"/);
+  assert.doesNotMatch(exterior, /id: 'phase1'|hsPhase/);
+  assert.match(exterior, /id: 'labs'/);
+  assert.match(exterior, /id: 'hatch'/);
+  for (const key of ['phase1Title', 'phase1Close', 'phase1Pdf']) {
+    const matches = i18n.match(new RegExp(`\\b${key}:`, 'g')) || [];
+    assert.equal(matches.length, 2, `${key} must exist in EN and AR`);
+  }
+  assert.equal(fs.existsSync(new URL('docs/phase1-ground-floor.jpg', root)), true);
+  assert.equal(fs.existsSync(new URL('docs/phase1-ground-floor.pdf', root)), true);
 });
 
 test('hatchery journey still flies the aisle and closes on L3T6', () => {

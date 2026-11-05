@@ -167,6 +167,18 @@ html[dir=rtl] .hs .hl b{font-family:'Noto Naskh Arabic';font-size:17px}
 .end-by{font-family:'Cormorant Garamond';font-style:italic;font-size:30px;color:var(--blue);margin-top:26px}
 #veil{position:fixed;inset:0;background:var(--ivory);z-index:50;pointer-events:none;opacity:1}
 #loading{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;gap:14px;background:var(--ivory);font-family:'Cormorant Garamond';font-size:30px;color:var(--blue)}
+#plan{position:fixed;inset:0;z-index:46;background:#0c1824;display:flex;flex-direction:column}
+#plan[hidden]{display:none!important}
+.plan-bar{margin:14px 16px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px 10px 18px;flex:none}
+.plan-bar b{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--blue);line-height:1.1}
+html[dir=rtl] .plan-bar b{font-family:'Noto Naskh Arabic',serif;font-size:22px}
+.plan-tools{display:flex;align-items:center;gap:8px;flex:none}
+.plan-tools a,.plan-tools button{min-width:36px;height:36px;padding:0 12px;border-radius:18px;border:1px solid var(--gold2);color:var(--blue);background:rgba(255,255,255,.72);font-size:16px;display:inline-flex;align-items:center;justify-content:center}
+.plan-tools a{font-size:12px;letter-spacing:.08em;font-weight:600;text-decoration:none}
+#planClose{background:var(--blue);color:#fff;border-color:var(--blue);font-size:13px;font-weight:600}
+#planStage{flex:1;min-height:0;overflow:hidden;touch-action:none;cursor:grab;position:relative}
+#planStage.dragging{cursor:grabbing}
+#planImg{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none;user-select:none;-webkit-user-drag:none}
 #cursor{position:fixed;left:0;top:0;z-index:55;pointer-events:none;display:none;filter:drop-shadow(0 3px 6px rgba(14,59,92,.35))}
 #cursor svg{position:relative;z-index:2}
 #cursor .ripple{position:absolute;left:5px;top:3px;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;border:2px solid var(--gold);opacity:0}
@@ -192,6 +204,9 @@ html[dir=rtl] .hs .hl b{font-family:'Noto Naskh Arabic';font-size:17px}
   .concept span{display:none}
   .hs .hl{padding:5px 9px}.hs .hl b{font-size:15px}.hs .hl span{display:none}
   .end-title{font-size:44px}
+  .plan-bar{margin:8px;padding:8px 10px}
+  .plan-bar b{font-size:18px}
+  html[dir=rtl] .plan-bar b{font-size:17px}
   .depth{top:130px;transform:none;width:70px;padding:10px}.dg{height:80px}
 }
 

@@ -72,6 +72,7 @@ function applyLang(l) {
   document.querySelectorAll('[data-th]').forEach(e => e.innerHTML = t(e.dataset.th));
   document.querySelectorAll('#langToggle button').forEach(b => b.classList.toggle('on', b.dataset.l === l));
   $('#btnLangCard').innerHTML = l === 'ar' ? '<span>EN</span>' : '<span class="ar">عربي</span>';
+  $('#planImg').alt = t('phase1Title');
   buildHotspots(currentHS); renderCrumb(); renderLevel(); setPP(pp, true);
 }
 
@@ -286,11 +287,73 @@ function showEnd() {
 function onHotspot(id) {
   if (id === 'brood') enterBroodstock();
   else if (id === 'hatch') goHatchery();
-  else if (id === 'labs' || id === 'ras') { selectHS(id); const h = HS.find(x => x.id === id); fly([V(h.pos.x - 80, 60, h.pos.z + 90)], [h.pos.clone().setY(G + 4)], 2.6); toast(id === 'labs' ? 'toastLabs' : 'toastRas', 4); }
+  else if (id === 'labs') { selectHS(id); const h = HS.find(x => x.id === id); fly([V(h.pos.x - 80, 60, h.pos.z + 90)], [h.pos.clone().setY(G + 4)], 2.6, 'power2.inOut', { onComplete: openPhase1 }); }
+  else if (id === 'ras') { selectHS(id); const h = HS.find(x => x.id === id); fly([V(h.pos.x - 80, 60, h.pos.z + 90)], [h.pos.clone().setY(G + 4)], 2.6); toast('toastRas', 4); }
   else if (id === 'dome') { hide('#intro'); selectHS(id); const h = HS.find(x => x.id === id); fly([V(h.pos.x - 90, 105, h.pos.z + 100)], [h.pos.clone().setY(G + 6)], 2.6, 'power2.inOut', { fov: 40 }); toast('toastDome', 4); }
   else if (id === 'cages') goSeaCages();
   else if (id === 'c03') diveCage();
   else if (id === 'l3t6') larvaeCloseUp();
+}
+// Laboratories opens the hosted Phase 1 ground-floor sheet. No new campus pin.
+const planView = { s: 1, fit: 1, x: 0, y: 0, drag: null };
+const planPts = new Map();
+let planPinch = null;
+function drawPlan() { $('#planImg').style.transform = `translate(${planView.x}px,${planView.y}px) scale(${planView.s})`; }
+function clampPlan(s) { return Math.min(2.5, Math.max(planView.fit || .05, s)); }
+function fitPlan() {
+  const img = $('#planImg'), stage = $('#planStage');
+  const nw = img.naturalWidth || 1, nh = img.naturalHeight || 1;
+  planView.fit = Math.min((stage.clientWidth - 28) / nw, (stage.clientHeight - 28) / nh);
+  planView.s = planView.fit;
+  planView.x = (stage.clientWidth - nw * planView.s) / 2;
+  planView.y = (stage.clientHeight - nh * planView.s) / 2;
+  drawPlan();
+}
+function zoomPlan(factor) {
+  const stage = $('#planStage'), mx = stage.clientWidth / 2, my = stage.clientHeight / 2;
+  const next = clampPlan(planView.s * factor), k = next / planView.s;
+  planView.x = mx - (mx - planView.x) * k; planView.y = my - (my - planView.y) * k; planView.s = next; drawPlan();
+}
+function openPhase1() {
+  const el = $('#plan'); el.hidden = false;
+  const img = $('#planImg');
+  if (img.complete && img.naturalWidth) fitPlan();
+}
+function closePhase1() { $('#plan').hidden = true; planPts.clear(); planView.drag = null; planPinch = null; }
+$('#planImg').addEventListener('load', () => { if (!$('#plan').hidden) fitPlan(); });
+$('#planClose').onclick = closePhase1;
+$('#planIn').onclick = () => zoomPlan(1.25);
+$('#planOut').onclick = () => zoomPlan(1 / 1.25);
+addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#plan').hidden) closePhase1(); });
+addEventListener('resize', () => { if (!$('#plan').hidden) fitPlan(); });
+{ const stage = $('#planStage');
+  stage.addEventListener('wheel', e => {
+    if ($('#plan').hidden) return;
+    e.preventDefault();
+    const r = stage.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+    const next = clampPlan(planView.s * (e.deltaY < 0 ? 1.12 : 1 / 1.12)), k = next / planView.s;
+    planView.x = mx - (mx - planView.x) * k; planView.y = my - (my - planView.y) * k; planView.s = next; drawPlan();
+  }, { passive: false });
+  stage.addEventListener('pointerdown', e => {
+    planPts.set(e.pointerId, { x: e.clientX, y: e.clientY }); stage.setPointerCapture(e.pointerId);
+    if (planPts.size === 1) { planView.drag = { x: e.clientX, y: e.clientY, ox: planView.x, oy: planView.y }; stage.classList.add('dragging'); }
+    else if (planPts.size === 2) { planView.drag = null; const [a, b] = [...planPts.values()]; planPinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, s: planView.s, x: planView.x, y: planView.y, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; }
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!planPts.has(e.pointerId)) return;
+    planPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (planPts.size === 2 && planPinch) {
+      const [a, b] = [...planPts.values()], d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      const next = clampPlan(planPinch.s * d / planPinch.d), r = stage.getBoundingClientRect();
+      const mx = planPinch.mx - r.left, my = planPinch.my - r.top, k = next / planPinch.s;
+      planView.s = next; planView.x = mx - (mx - planPinch.x) * k; planView.y = my - (my - planPinch.y) * k; drawPlan();
+    } else if (planView.drag && planPts.size === 1) {
+      planView.x = planView.drag.ox + e.clientX - planView.drag.x; planView.y = planView.drag.oy + e.clientY - planView.drag.y; drawPlan();
+    }
+  });
+  const up = e => { planPts.delete(e.pointerId); if (planPts.size < 2) planPinch = null; if (!planPts.size) { planView.drag = null; stage.classList.remove('dragging'); } };
+  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+  stage.addEventListener('dblclick', fitPlan);
 }
 $('#btnStart').onclick = () => enterBroodstock();
 $('#btnFree').onclick = () => { hide('#intro'); toast('toastFree'); };
