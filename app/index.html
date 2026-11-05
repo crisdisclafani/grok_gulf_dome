@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%2214%22 fill=%22%23f6f1e7%22 stroke=%22%23b8955a%22/%3E%3C/svg%3E">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Egg to Harvest · Interactive journey (concept demo)</title>
+<link rel="stylesheet" href="css/app.css">
+<script src="vendor/gsap.min.js"></script>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/addons/" } }
+</script>
+</head>
+<body>
+<div id="stage"></div>
+
+<!-- hotspots (projected from 3D every frame) -->
+<div id="hotspots"></div>
+<div id="fishTag" class="fishtag"><i></i><div class="hl"><b data-t="fishTag">Hamour</b><span data-t="fishTagSub">Tap to discover</span></div></div>
+
+<header class="top glass">
+  <div class="brand">
+    <div class="mark"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M2 12c2.5-3 5-3 7.5 0s5 3 8.5-1" fill="none" stroke="#0E3B5C" stroke-width="1.4"/><path d="M2 8c2.5-3 5-3 7.5 0s5 3 8.5-1" fill="none" stroke="#B39257" stroke-width="1.1"/></svg></div>
+    <div><b data-t="brand">Egg to Harvest</b><span data-t="brandSub">Sheikh Khalifa Marine Research Centre · Interactive journey</span></div>
+  </div>
+  <nav id="nav">
+    <a data-nav="campus" data-t="navCampus">Campus</a><a data-nav="facilities" data-t="navFac">Facilities</a><a data-nav="cages" data-t="navCages">Sea cages</a><a data-nav="species" data-t="navSpecies">Species</a><a data-nav="trace" data-t="navTrace">Traceability</a>
+  </nav>
+  <div class="tools">
+    <span class="tag concept-tag" data-t="conceptTag">Concept demo</span>
+    <div class="lang" id="langToggle"><button data-l="en" class="on">EN</button><button data-l="ar" class="ar">عربي</button></div>
+  </div>
+</header>
+
+<div id="crumb" class="crumb glass"></div>
+
+<!-- Level 1: campus intro -->
+<section id="intro" class="panel glass">
+  <div class="kick" data-t="introKick">Umm Al Quwain · United Arab Emirates</div>
+  <h1 class="h1" data-th="introTitle">Sheikh Khalifa<br><em>Marine Research Centre</em></h1>
+  <p class="lead" data-t="introLead">Explore the campus from above. Select a building to fly inside, or follow the guided journey from egg to harvest.</p>
+  <div class="stats">
+    <div><b>16</b><span data-t="st1">laboratories</span></div>
+    <div><b>26</b><span data-t="st2">RAS systems</span></div>
+    <div><b>95%</b><span data-t="st3">water saved*</span></div>
+  </div>
+  <div class="btns"><button class="btn p" id="btnStart" data-t="start">Start guided journey</button><button class="btn o" id="btnFree" data-t="free">Explore freely</button></div>
+  <p class="fine" data-t="introFine">* “Save up to 95% of our water”, as stated in the film.</p>
+</section>
+
+<!-- Level 3-4: broodstock -->
+<section id="brood" class="panel glass right">
+  <div class="row-sb"><div class="kick" data-t="broodKick">Broodstock hall</div><span class="tag" data-t="illus">Illustrative values</span></div>
+  <h2 class="h1 h2" data-th="broodTitle">Broodstock tanks<br><em>controlled environment</em></h2>
+  <div class="params">
+    <div class="param"><span data-t="pTemp">Temperature</span><b id="vTemp">24.6</b><em>°C</em></div>
+    <div class="param"><span data-t="pSal">Salinity</span><b id="vSal">38.2</b><em>ppt</em></div>
+    <div class="param"><span data-t="pO2">Dissolved O₂</span><b id="vO2">7.1</b><em>mg/L</em></div>
+    <div class="param"><span data-t="pPh">pH</span><b id="vPh">8.10</b><em></em></div>
+  </div>
+  <div class="photo">
+    <div class="row-sb"><span class="lbl" data-t="photoperiod">Photoperiod</span><b id="ppLabel">Day</b></div>
+    <div class="slider" id="ppSlider"><div class="track"><div class="fill" id="ppFill"></div></div><div class="knob" id="ppKnob"></div></div>
+    <div class="row-sb ticks"><span data-t="ppDay">Day</span><span data-t="ppDusk">Dusk</span><span data-t="ppNight">Night</span></div>
+  </div>
+  <p class="fine" data-t="broodFine">Controlled in the film: temperature, salinity, photoperiod, oxygen and pH. Live sensor values shown here are illustrative.</p>
+  <div class="btns"><button class="btn p" id="btnToHatch" data-t="toHatch">Next stage › Hatchery</button></div>
+</section>
+
+<!-- Level 3-4: hatchery -->
+<section id="lifecycle" class="glass lifecycle">
+  <div class="tag lc-tag" data-t="lifecycle">Lifecycle</div>
+  <div class="lc-line"><i id="lcFill"></i></div>
+  <div class="lc-step" data-s="0"><span class="dot"></span><b data-t="lc0">Broodstock</b><small data-t="lc0s">Done</small></div>
+  <div class="lc-step" data-s="1"><span class="dot"></span><b data-t="lc1">Hatchery</b><small data-t="lc1s">Eggs &amp; larvae</small></div>
+  <div class="lc-step" data-s="2"><span class="dot"></span><b data-t="lc2">Nursery</b><small data-t="lc2s">Juveniles</small></div>
+  <div class="lc-step" data-s="3"><span class="dot"></span><b data-t="lc3">Sea cage</b><small data-t="lc3s">Grow-out</small></div>
+</section>
+<section id="tank" class="panel glass right">
+  <div class="row-sb"><div class="kick" data-t="tankKick">Digital tank record</div><span class="tag" data-t="fromVideo">From source video</span></div>
+  <h2 class="h1 h2">Tank L3T6</h2>
+  <table class="rec">
+    <tr><td data-t="rSpecies">Species</td><td class="serif" data-t="seabream">Seabream</td></tr>
+    <tr><td data-t="rDate">Stocking date</td><td>18/07/2026</td></tr>
+    <tr><td data-t="rStocked">Stocked eggs</td><td id="cStocked">750,000</td></tr>
+    <tr><td data-t="rHatched">Hatched eggs</td><td id="cHatched">580,000</td></tr>
+    <tr><td data-t="rUnhatched">Unhatched eggs</td><td id="cUnhatched">170,000</td></tr>
+  </table>
+  <div class="row-sb small"><span data-t="hatchRate">Hatch rate</span><b id="cRate">≈ 77%</b></div>
+  <div class="bar"><i id="rateBar"></i></div>
+  <div class="wb"><img src="whiteboard.jpg" alt=""><p data-t="wbNote">The handwritten tank whiteboard seen in the film becomes a live digital card.</p></div>
+  <div class="btns"><button class="btn o" id="btnLarvae" data-t="larvae">View larvae up close</button><button class="btn p" id="btnToCages" data-t="toCages">Next stage ›</button></div>
+</section>
+
+<!-- Level 3-4: sea cages -->
+<section id="cages" class="panel glass right">
+  <div class="row-sb"><div class="kick" data-t="cagesKick">Open-sea grow-out</div><span class="tag" data-t="illus">Illustrative values</span></div>
+  <h2 class="h1 h2" data-th="cagesTitle">Sea cages<br><em>Cage C-03</em></h2>
+  <table class="rec">
+    <tr><td data-t="rSpecies">Species</td><td class="serif" data-t="hamour">Hamour</td></tr>
+    <tr><td data-t="rStage">Stage</td><td data-t="lc3s">Grow-out</td></tr>
+    <tr><td data-t="rSeaT">Sea temperature</td><td>[—] °C</td></tr>
+    <tr><td data-t="rStock">Stocking</td><td>[—]</td></tr>
+  </table>
+  <p class="fine" data-t="cagesFine">Floating circular pens off the coast, as shown in the film. Values are placeholders, to be fed by the client.</p>
+  <div class="btns"><button class="btn p" id="btnDive" data-t="dive">Dive into the cage</button></div>
+</section>
+
+<!-- Level 5-6: underwater HUD -->
+<div id="depth" class="glass depth"><span data-t="depth">Depth</span><b id="depthVal">0.0</b><em>m</em><div class="dg"><i id="depthBar"></i></div></div>
+<div id="tapHint" class="hint glass" data-t="tapHint">Tap a fish to discover it</div>
+
+<!-- Level 7: fish card -->
+<section id="card" class="card glass">
+  <div class="row-sb"><div class="kick" data-t="fishCard">Fish card</div><span class="tag" data-t="illusPh">Illustrative values · placeholders</span></div>
+  <div class="names">
+    <div><h2 class="h1 fc-en" data-t="hamour">Hamour</h2><div class="lat"><i>Epinephelus coioides</i> · <span data-t="grouper">Orange-spotted grouper</span></div></div>
+    <div class="fc-ar arn" data-t="fcAlt">هامور</div>
+  </div>
+  <div class="chips"><span data-t="lc0">Broodstock</span><span data-t="lc1">Hatchery</span><span data-t="lc2">Nursery</span><span class="on" data-t="lc3">Sea cage</span></div>
+  <div class="grid">
+    <div class="cell wide"><span data-t="habitat">Habitat</span><p data-t="habitatV">[Native range and environment — from CMS]</p></div>
+    <div class="cell"><span data-t="size">Size</span><p>[—] cm · [—] kg</p></div>
+    <div class="cell"><span data-t="pTemp">Temperature</span><p><b id="fT">26.4</b> °C</p></div>
+    <div class="cell"><span data-t="pSal">Salinity</span><p><b id="fS">39.0</b> ppt</p></div>
+    <div class="cell"><span data-t="o2ph">Dissolved O₂ · pH</span><p><b id="fO">6.8</b> mg/L · <b id="fP">8.12</b></p></div>
+    <div class="cell wide"><span data-t="nutrition">Nutrition</span><p data-t="nutritionV">[Nutritional value per 100 g — provided by the client]</p></div>
+  </div>
+  <div class="trace">
+    <span class="lbl" data-t="traceT">Traceability · egg to harvest</span>
+    <div class="tl">
+      <div><i class="d"></i><b data-t="tEgg">Egg</b><small>[dd/mm]</small></div>
+      <div><i class="d"></i><b data-t="tLarva">Larva</b><small>[dd/mm]</small></div>
+      <div><i class="d"></i><b data-t="tJuv">Juvenile</b><small>[dd/mm]</small></div>
+      <div><i class="d on"></i><b data-t="tGrow">Grow-out</b><small>[dd/mm]</small></div>
+      <div><i></i><b data-t="tHarv">Harvest</b><small>[dd/mm]</small></div>
+    </div>
+    <small class="origin" data-t="origin">Origin: [hatchery / tank ID] · Batch [—]</small>
+  </div>
+  <div class="btns"><button class="btn p" id="btnAR"><svg width="14" height="14" viewBox="0 0 16 16"><path d="M8 1l6 3.5v7L8 15l-6-3.5v-7z M2 4.5L8 8l6-3.5M8 8v7" fill="none" stroke="#fff" stroke-width="1.2"/></svg><span data-t="ar">View in AR</span></button><button class="btn o" id="btnNext" data-t="nextFish">Next fish ›</button><button class="btn o" id="btnLangCard"><span class="ar">عربي</span></button></div>
+  <p class="fine" data-t="arNote">Arabic copy is a first draft, to be reviewed by a native copywriter.</p>
+</section>
+
+<div id="levels" class="levels glass"><div class="dots" id="dots"></div><span id="levelTxt"></span></div>
+<div id="conceptNote" class="concept glass"><em data-t="conceptTag">Concept demo</em> · <span data-t="conceptSub">real-time 3D in the browser</span></div>
+<div id="toast" class="toast glass"></div>
+
+<!-- end card -->
+<section id="endcard">
+  <div class="end-inner">
+    <div class="mark big"><svg width="34" height="34" viewBox="0 0 20 20"><path d="M2 12c2.5-3 5-3 7.5 0s5 3 8.5-1" fill="none" stroke="#0E3B5C" stroke-width="1.2"/><path d="M2 8c2.5-3 5-3 7.5 0s5 3 8.5-1" fill="none" stroke="#B39257" stroke-width="1"/></svg></div>
+    <div class="kick" data-t="endKick">Concept demo · real-time 3D web experience</div>
+    <h1 class="h1 end-title" data-th="endTitle">An Interactive Journey<br><em>from Egg to Harvest</em></h1>
+    <div class="goldrule"></div>
+    <p class="end-sub" data-t="endSub">Campus · Broodstock · Hatchery · Sea cages · Fish card — English &amp; Arabic, desktop &amp; mobile</p>
+    <p class="end-by" data-t="endBy">Concept by Kriswa International</p>
+  </div>
+</section>
+
+<div id="veil"></div>
+<div id="cursor"><svg width="26" height="26" viewBox="0 0 26 26"><path d="M5 3l15 9-6.5 1.6L10 20z" fill="#FBF8F2" stroke="#0E3B5C" stroke-width="1.4" stroke-linejoin="round"/></svg><span class="ripple"></span></div>
+<div id="loading"><div class="mark"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M2 12c2.5-3 5-3 7.5 0s5 3 8.5-1" fill="none" stroke="#0E3B5C" stroke-width="1.4"/><path d="M2 8c2.5-3 5-3 7.5 0s5 3 8.5-1" fill="none" stroke="#B39257" stroke-width="1.1"/></svg></div><span>Egg to Harvest</span></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
