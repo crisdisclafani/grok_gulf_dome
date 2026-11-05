@@ -47,13 +47,13 @@ function applyCamera(dt) {
   if (mode === 'orbit') { controls.update(); return; }
   if (mode === 'follow') updateFollow(dt);
   if (mode === 'drift') { const a = drift.a0 + (T - drift.t0) * .016; rig.pos.set(HERO_CAGE.x + Math.cos(a) * drift.r, drift.y + Math.sin((T - drift.t0) * .2) * .08, HERO_CAGE.z + Math.sin(a) * drift.r); rig.tgt.set(HERO_CAGE.x + Math.cos(a + 1.9) * 4, drift.y - .6, HERO_CAGE.z + Math.sin(a + 1.9) * 4); }
-  const sw = rig.sway * (W === EXT ? extSway : .05); // very light hand-held drift; almost none over the water
+  const sw = rig.sway * (W === EXT ? extSway : .05); // exterior sway is 0 so the gulf does not drift
   camera.position.copy(rig.pos).sub(W.offset).add(lookTmp.set(Math.sin(T * .21) * sw, Math.sin(T * .17 + 1) * sw * .5, Math.cos(T * .19) * sw));
   camera.lookAt(lookTmp.copy(rig.tgt).sub(W.offset));
   if (Math.abs(camera.fov - rig.fov) > .01) { camera.fov = rig.fov; camera.updateProjectionMatrix(); }
 }
 const drift = { a0: 0, t0: 0, r: 8, y: -4.5 };
-let extSway = 2.2; // campus aerial drift (m); set low over the sea cages
+let extSway = 0; // no handheld drift over the exterior sea
 
 // ---------------- i18n ----------------
 let lang = 'en';
@@ -151,7 +151,7 @@ const state = { where: 'campus', cagesMode: false };
 function crumbCampus() { return { k: 'crCampus', fn: goCampus }; }
 function goCampus() {
   hideAll(); state.cagesMode = false; selectHS(null);
-  const go = () => { useWorld(EXT); extSway = 2.2; place(V(-330, 210, 330), V(-40, 0, -20), 40); fly([V(-290, 175, 270)], [V(-35, 0, -25)], 10, 'sine.out'); showHotspots(true); };
+  const go = () => { useWorld(EXT); extSway = 0; stopOrbit(); place(V(-290, 175, 270), V(-35, 0, -25), 40); applyCamera(0); showHotspots(true); startOrbit(); };
   if (W !== EXT || state.where !== 'campus') veilSwap(go); else go();
   state.where = 'campus'; setCrumb([{ k: 'crCampus' }]); setLevel(1, 'lv1'); setNav('campus'); $('#crumb').title = t('crCampus') + ' · ' + t('start');
 }
@@ -195,7 +195,7 @@ function goSeaCages() {
   hideAll(); state.where = 'cages'; state.cagesMode = true;
   setCrumb([crumbCampus(), { k: 'crCages' }, { k: 'crC03' }]); setNav('cages');
   veilSwap(() => {
-    useWorld(EXT); setLevel(5, 'lv5'); extSway = .25;
+    useWorld(EXT); setLevel(5, 'lv5'); extSway = 0;
     document.querySelectorAll('.lc-step').forEach((s, i) => { s.classList.toggle('done', i < 3); s.classList.toggle('on', i === 3); });
     place(V(-60, 70, 20), V(120, 0, -80), 46);
     fly([V(90, 55, -30), V(260, 38, -60), V(372, 24, -86)], [V(300, 0, -110), V(400, 0, -118), V(414, -1, -124)], 6.2, 'power1.inOut', { fov: 42 });
