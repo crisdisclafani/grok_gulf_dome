@@ -76,23 +76,26 @@ export function buildExterior(renderer) {
   // ---------- sea ----------
   const cageU = CAGES.map(([x, z]) => new THREE.Vector2(x, z));
   const water = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uSun: { value: SUN }, uCages: { value: cageU }, uCageR: { value: CAGE_R - .4 }, uHaze: { value: HAZE } },
+    uniforms: { uSun: { value: SUN }, uCages: { value: cageU }, uCageR: { value: CAGE_R - .4 }, uHaze: { value: HAZE } },
     vertexShader: `varying vec3 vW; void main(){ vec4 w=modelMatrix*vec4(position,1.); vW=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }`,
     fragmentShader: SKY_GLSL + `
-      uniform float uTime; uniform vec2 uCages[6]; uniform float uCageR; uniform vec3 uHaze; varying vec3 vW;
+      uniform vec2 uCages[6]; uniform float uCageR; uniform vec3 uHaze; varying vec3 vW;
       float shoreX(float z){ return 70.+18.*sin(z/140.)+8.*sin(z/53.+1.); }
       float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
       float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f); return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y); }
       void main(){
-        vec3 V=cameraPosition-vW; float dist=length(V); V/=dist;
-        vec2 p=vW.xz; vec2 dh=vec2(0.); // Still water: no animated displacement or high-frequency waves.
-        vec3 N=normalize(vec3(-dh.x,1.,-dh.y));
+        // Frozen gulf: every term is a function of world position. No time uniform,
+        // and no cameraPosition, so the surface cannot ripple, foam, or shimmer.
+        vec3 eye=vec3(-290.,175.,270.);
+        vec3 V=eye-vW; float dist=length(V); V/=dist;
+        vec2 p=vW.xz;
+        vec3 N=vec3(0.,1.,0.);
         float d=vW.x-shoreX(vW.z);
         vec3 deep=vec3(.004,.07,.15), mid=vec3(.008,.22,.32), shal=vec3(.05,.55,.55), sandb=vec3(.42,.62,.50);
         vec3 base=mix(deep,mid,exp(-max(d,0.)/260.));
         base=mix(base,shal,exp(-max(d,0.)/40.));
         base=mix(base,sandb,exp(-max(d,0.)/7.)*.6);
-        // net pens: greener water and the moving dark shapes of the stock below
+        // net pens: greener water and static dark patches of the stock below
         for(int i=0;i<6;i++){ vec2 r=p-uCages[i]; float dc=length(r); float inside=smoothstep(uCageR,uCageR-.8,dc);
           float a=atan(r.y,r.x);
           float sh=smoothstep(.66,.9,vnoise(vec2(a*16.,dc*2.2+float(i)*7.)))*smoothstep(1.5,4.,dc);
@@ -101,10 +104,8 @@ export function buildExterior(renderer) {
         vec3 R=reflect(-V,N); R.y=abs(R.y);
         vec3 col=base*(.45+.55*max(dot(N,uSun),0.));
         col=mix(col,skyCol(R,0.)*.85,fr*.55);
-        float sp=pow(max(dot(R,uSun),0.),120.); // Broad, soft static highlight.
+        float sp=pow(max(dot(R,uSun),0.),120.);
         col+=vec3(1.,.95,.85)*(sp*.65+pow(max(dot(R,uSun),0.),24.)*.035);
-        float foam=0.0; // No crawling shoreline animation.
-        col=mix(col,vec3(.92,.93,.9),foam*.75);
         col=mix(col,uHaze,1.-exp(-dist*.00028));
         gl_FragColor=vec4(col,1.);
         #include <tonemapping_fragment>
@@ -278,6 +279,6 @@ export function buildExterior(renderer) {
   ];
   const cageHotspots = [{ id: 'c03', pos: HERO_CAGE.clone().setY(6), key: 'hsC03', sub: 'hsC03S' }];
 
-  function update(dt, t) { water.uniforms.uTime.value = t; }
+  function update() { /* exterior sea is time-invariant; nothing to advance */ }
   return { scene, update, hotspots, cageHotspots, exposure: 1.0, bloom: .18, bloomThreshold: .95, near: .5, far: 7000, sun };
 }
