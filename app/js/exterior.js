@@ -85,13 +85,7 @@ export function buildExterior(renderer) {
       float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f); return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y); }
       void main(){
         vec3 V=cameraPosition-vW; float dist=length(V); V/=dist;
-        vec2 p=vW.xz; float t=uTime*.55; vec2 dh=vec2(0.); // slow, calm sea
-        float fade=exp(-dist/700.);
-        float fw=length(fwidth(p))+1e-4; // pixel footprint: drop waves too fine for the pixel (no shimmer/aliasing)
-        #define W(dx,dy,f,a) { vec2 dd=normalize(vec2(dx,dy)); float ph=dot(dd,p)*f+t*sqrt(9.8*f); dh+=dd*a*f*cos(ph)*smoothstep(1.2,.25,f*fw); }
-        // long gentle swells, low amplitude
-        W(1.,.2,.03,.5) W(.7,.7,.05,.26) W(.2,1.,.09,.12) W(-.6,.8,.16,.05) W(.9,-.4,.28,.022)
-        float hf=exp(-dist/250.); W(.3,-1.,.55,.008*hf) W(-1.,.3,.9,.004*hf)
+        vec2 p=vW.xz; vec2 dh=vec2(0.); // Still water: no animated displacement or high-frequency waves.
         vec3 N=normalize(vec3(-dh.x,1.,-dh.y));
         float d=vW.x-shoreX(vW.z);
         vec3 deep=vec3(.004,.07,.15), mid=vec3(.008,.22,.32), shal=vec3(.05,.55,.55), sandb=vec3(.42,.62,.50);
@@ -100,16 +94,16 @@ export function buildExterior(renderer) {
         base=mix(base,sandb,exp(-max(d,0.)/7.)*.6);
         // net pens: greener water and the moving dark shapes of the stock below
         for(int i=0;i<6;i++){ vec2 r=p-uCages[i]; float dc=length(r); float inside=smoothstep(uCageR,uCageR-.8,dc);
-          float a=atan(r.y,r.x)+uTime*.02*(i%2==0?1.:-1.);
+          float a=atan(r.y,r.x);
           float sh=smoothstep(.66,.9,vnoise(vec2(a*16.,dc*2.2+float(i)*7.)))*smoothstep(1.5,4.,dc);
           base=mix(base,mix(vec3(.02,.22,.24),vec3(.012,.11,.12),sh*.55),inside*.9); }
         float fr=.02+.98*pow(1.-max(dot(N,V),0.),5.);
         vec3 R=reflect(-V,N); R.y=abs(R.y);
         vec3 col=base*(.45+.55*max(dot(N,uSun),0.));
         col=mix(col,skyCol(R,0.)*.85,fr*.55);
-        float sp=pow(max(dot(R,uSun),0.),220.);
-        col+=vec3(1.,.95,.85)*(sp*2.6+pow(max(dot(R,uSun),0.),40.)*.10);
-        float foam=(1.-smoothstep(0.,5.,d))*smoothstep(-1.5,.3,d)*(.55+.45*sin(d*2.2-uTime*.6+sin(vW.z*.08)*2.))*(.6+.4*vnoise(p*.6));
+        float sp=pow(max(dot(R,uSun),0.),120.); // Broad, soft static highlight.
+        col+=vec3(1.,.95,.85)*(sp*.65+pow(max(dot(R,uSun),0.),24.)*.035);
+        float foam=0.0; // No crawling shoreline animation.
         col=mix(col,vec3(.92,.93,.9),foam*.75);
         col=mix(col,uHaze,1.-exp(-dist*.00028));
         gl_FragColor=vec4(col,1.);
@@ -175,8 +169,8 @@ export function buildExterior(renderer) {
   road(-62, -10, 11, 470); road(-62 - 100, 180, 200 + 11, 11); road(-62 + 50, 180, 100, 11); road(-80, -150, 160, 11); road(-80, 75, 110, 11); road(30, -20, 10, 300);
   for (const s of [1, -1]) { add(new THREE.BoxGeometry(.4, .3, 470), kerb, -62 + s * 5.7, G + .15, -10, false); }
   // Visitor centre dome — concept geometry from the client's aerial render.
-  // The free shore-side site is between the northern road and the beach, clear of every shed.
-  const domeX = 48, domeZ = -190;
+  // Entire plaza is inside the compound and inland of shoreX(20) = 82.56; no shed overlap.
+  const domeX = -25, domeZ = 20;
   const domeWhite = new THREE.MeshStandardMaterial({ color: '#f8f8f5', roughness: .48, metalness: .03 });
   const domeRib = new THREE.MeshStandardMaterial({ color: '#deded9', roughness: .62, metalness: .04 });
   const plaza = add(new THREE.CircleGeometry(36, 64).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#d7d5cf', roughness: .9 }), domeX, G + .16, domeZ, false);
