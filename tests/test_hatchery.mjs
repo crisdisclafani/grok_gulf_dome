@@ -19,17 +19,18 @@ test('phase 2 hatchery is a built interior, not a drawing', () => {
   assert.doesNotMatch(main, /SITE PLAN/i);
 });
 
-test('laboratories opens the hosted Phase 1 sheet and adds no campus pin', () => {
+test('laboratories building opens the hosted Phase 1 sheet from its pin', () => {
   const i18n = fs.readFileSync(new URL('js/i18n.js', root), 'utf8');
   const labs = main.split("id === 'labs'")[1].split('else if')[0];
-  assert.match(labs, /fly\(/);
   assert.match(labs, /openPhase1/);
   assert.doesNotMatch(labs, /useWorld|goHatchery|toastLabs/);
+  assert.match(main, /campusApproach/);
   assert.match(html, /docs\/phase1-ground-floor\.jpg/);
   assert.match(html, /docs\/phase1-ground-floor\.pdf/);
   assert.match(html, /id="plan"/);
-  assert.doesNotMatch(exterior, /id: 'phase1'|hsPhase/);
-  assert.match(exterior, /id: 'labs'/);
+  assert.match(exterior, /id: 'phase1'/);
+  assert.match(exterior, /shed\(LABS\.x, LABS\.z, 52, 60, 9/);
+  assert.doesNotMatch(exterior, /phase1-ground-floor/);
   assert.match(exterior, /id: 'hatch'/);
   for (const key of ['phase1Title', 'phase1Close', 'phase1Pdf']) {
     const matches = i18n.match(new RegExp(`\\b${key}:`, 'g')) || [];

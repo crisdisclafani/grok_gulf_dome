@@ -55,10 +55,11 @@ test('dome has English and Arabic labels and concept toast', () => {
 });
 
 test('dome hotspot selects, flies closer and shows concept toast without interior', () => {
-  assert.match(main, /else if \(id === 'dome'\)/);
-  const block = main.split("else if (id === 'dome')")[1].split("else if")[0];
-  assert.match(block, /selectHS\(id\)/);
-  assert.match(block, /fly\(/);
+  const fly = main.slice(main.indexOf('function flyToCampus'), main.indexOf('function onHotspot'));
+  assert.match(fly, /selectHS\(id\)/);
+  assert.match(fly, /fly\(/);
+  assert.match(fly, /else if \(id === 'dome'\)/);
+  const block = fly.split("else if (id === 'dome')")[1];
   assert.match(block, /toast\('toastDome', 4\)/);
   assert.doesNotMatch(block, /buildBrood|buildHatch|veilSwap|useWorld/);
 });

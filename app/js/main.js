@@ -2,7 +2,8 @@ import './seed.js';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { renderer, camera, composer, bokeh, setWorld, render, adapt, DEMO, CAPTURE, TIER, MOBILE } from './core.js';
-import { buildExterior, HERO_CAGE, G } from './exterior.js';
+import { buildExterior, HERO_CAGE } from './exterior.js';
+import { CAMERA_CLEARANCE, CAMPUS_MAX_DISTANCE, CAMPUS_MIN_DISTANCE, campusApproach, constrainCampusCamera, surfaceY } from './campus-nav.js';
 import { buildBrood } from './brood.js';
 import { buildHatch, HERO_TANK, HATCH_APPROACH } from './hatch.js';
 import { buildUnder } from './under.js';
@@ -26,8 +27,13 @@ function useWorld(w) { W = w; setWorld(w); bokeh.enabled = false; buildHotspots(
 // rig.pos / rig.tgt are in "journey" coordinates (exterior world coordinates; underwater adds the cage offset)
 const rig = { pos: V(-330, 210, 330), tgt: V(-40, 0, -20), sway: 1, fov: 40 };
 let mode = 'rig'; // 'rig' | 'orbit' | 'follow' | 'drift'
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enabled = false; controls.enableDamping = true; controls.dampingFactor = .08;
+let controls;
+function bindControls() {
+  if (controls) controls.dispose();
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enabled = false; controls.enableDamping = true; controls.dampingFactor = .09; controls.zoomSpeed = .72;
+}
+bindControls();
 let flight = null;
 function fly(points, targets, dur, ease = 'power2.inOut', extra = {}) {
   if (flight) flight.kill();
@@ -36,23 +42,45 @@ function fly(points, targets, dur, ease = 'power2.inOut', extra = {}) {
   const P = new THREE.CatmullRomCurve3([rig.pos.clone(), ...points], false, 'centripetal');
   const Tg = new THREE.CatmullRomCurve3([rig.tgt.clone(), ...targets], false, 'centripetal');
   const o = { p: 0 }, f0 = rig.fov, f1 = extra.fov ?? rig.fov, s0 = rig.sway;
-  flight = gsap.to(o, { p: 1, duration: dur, ease, onUpdate() { P.getPoint(o.p, rig.pos); Tg.getPoint(o.p, rig.tgt); rig.fov = f0 + (f1 - f0) * o.p; rig.sway = s0 * (1 - o.p) + (extra.sway ?? 1) * o.p; extra.onUpdate && extra.onUpdate(o.p); }, onComplete() { flight = null; extra.onComplete && extra.onComplete(); if (!DEMO) startOrbit(); } });
+  flight = gsap.to(o, { p: 1, duration: dur, ease, onUpdate() { P.getPoint(o.p, rig.pos); Tg.getPoint(o.p, rig.tgt); rig.fov = f0 + (f1 - f0) * o.p; rig.sway = s0 * (1 - o.p) + (extra.sway ?? 0) * o.p; extra.onUpdate && extra.onUpdate(o.p); }, onComplete() { flight = null; extra.onComplete && extra.onComplete(); if (!DEMO && !flight) startOrbit(); } });
   return flight;
 }
 function place(pos, tgt, fov = rig.fov) { if (flight) flight.kill(); flight = null; rig.pos.copy(pos); rig.tgt.copy(tgt); rig.fov = fov; }
+function campusFloorAt(x, z) { return surfaceY(x, z) + CAMERA_CLEARANCE; }
+function applyCampusConstraint() {
+  const floor = campusFloorAt(camera.position.x, camera.position.z);
+  const lim = constrainCampusCamera(camera.position, controls.target, floor);
+  controls.maxPolarAngle = lim.maxPolar;
+  if (camera.position.y < floor) {
+    const lift = floor - camera.position.y;
+    camera.position.y += lift; controls.target.y += lift;
+  }
+}
 function startOrbit() {
   if (DEMO || CAPTURE || mode !== 'rig') return;
-  mode = 'orbit'; controls.target.copy(rig.tgt).sub(W.offset); controls.enabled = true;
   const hatch = W === HAT;
-  controls.minDistance = W === EXT ? 20 : hatch ? 1.6 : 1;
-  controls.maxDistance = W === EXT ? 700 : hatch ? 40 : 25;
-  controls.minPolarAngle = hatch ? 0.32 : 0;
-  controls.maxPolarAngle = W === EXT ? 1.45 : hatch ? 1.58 : Math.PI;
+  bindControls();
+  mode = 'orbit';
+  controls.target.copy(rig.tgt).sub(W.offset);
+  camera.position.copy(rig.pos).sub(W.offset);
+  camera.lookAt(controls.target);
+  controls.enabled = true;
+  controls.minDistance = W === EXT ? CAMPUS_MIN_DISTANCE : hatch ? 1.6 : 1;
+  controls.maxDistance = W === EXT ? CAMPUS_MAX_DISTANCE : hatch ? 40 : 25;
+  controls.minPolarAngle = hatch ? 0.32 : 0.08;
+  controls.maxPolarAngle = W === EXT ? 1.42 : hatch ? 1.58 : Math.PI;
+  if (W === EXT) applyCampusConstraint();
+  controls.update();
 }
 function stopOrbit() { if (mode === 'orbit') { rig.pos.copy(camera.position).add(W.offset); rig.tgt.copy(controls.target).add(W.offset); } controls.enabled = false; }
 const lookTmp = V(0, 0, 0);
 function applyCamera(dt) {
-  if (mode === 'orbit') { controls.update(); return; }
+  if (mode === 'orbit') {
+    if (W === EXT) applyCampusConstraint();
+    controls.update();
+    if (W === EXT) applyCampusConstraint();
+    return;
+  }
   if (mode === 'follow') updateFollow(dt);
   if (mode === 'drift') { const a = drift.a0 + (T - drift.t0) * .016; rig.pos.set(HERO_CAGE.x + Math.cos(a) * drift.r, drift.y + Math.sin((T - drift.t0) * .2) * .08, HERO_CAGE.z + Math.sin(a) * drift.r); rig.tgt.set(HERO_CAGE.x + Math.cos(a + 1.9) * 4, drift.y - .6, HERO_CAGE.z + Math.sin(a + 1.9) * 4); }
   const sw = rig.sway * (W === EXT ? extSway : .05); // exterior sway is 0 so the gulf does not drift
@@ -84,6 +112,7 @@ function buildHotspots(list) {
   HS = list.map(h => {
     const el = document.createElement('div'); el.className = 'hs'; el.dataset.id = h.id;
     el.innerHTML = `<i></i><span class="ln"></span><div class="hl"><b>${t(h.key)}</b><span>${t(h.sub)}</span></div>`;
+    el.classList.toggle('phase1', h.id === 'phase1');
     el.addEventListener('click', e => { e.stopPropagation(); onHotspot(h.id); });
     el.style.visibility = 'hidden'; hsLayer.appendChild(el);
     return { ...h, el, a: 0 };
@@ -202,7 +231,7 @@ function goCampus() {
   if (W !== EXT || state.where !== 'campus') veilSwap(go); else go();
   state.where = 'campus'; setCrumb([{ k: 'crCampus' }]); setLevel(1, 'lv1'); setNav('campus'); $('#crumb').title = t('crCampus') + ' · ' + t('start'); syncHome();
 }
-function enterBroodstock() {
+function enterBroodstock(fromPin) {
   hideAll(); selectHS('brood'); state.where = 'brood';
   setCrumb([crumbCampus(), { k: 'crFac' }, { k: 'crBrood' }]); setLevel(2, 'lv2'); setNav('facilities');
   const inside = () => {
@@ -211,9 +240,9 @@ function enterBroodstock() {
     fly([V(21, 3.0, 6), V(13, 3.7, 10.5)], [V(4, 1.2, 1), V(-6, .8, -1.5)], 5.2, 'power2.out', { sway: 1 });
     setLevel(3, 'lv3');
   };
-  if (W === EXT) {
+  if (W === EXT && !fromPin) {
     showHotspots(false);
-    fly([V(-150, 115, 215), V(-20, 46, 140), V(-6, 16, 96)], [V(-20, 0, 10), V(-5, 4, 40), V(-5, 5, 42)], 4.4, 'power2.inOut', { fov: 44 });
+    fly([V(-150, 115, 215), V(-20, 46, 140), V(-6, 16, 96)], [V(-20, 0, 10), V(-5, 4, 40), V(-5, 5, 42)], 4.4, 'power2.inOut', { fov: 44, sway: 0 });
     gsap.delayedCall(3.7, () => veilSwap(inside, .45, .7));
   } else veilSwap(inside);
   syncHome();
@@ -241,16 +270,22 @@ function larvaeCloseUp() {
     3.4, 'power2.inOut', { fov: MOBILE ? 40 : 33, sway: .22 }
   );
 }
-function goSeaCages() {
+function goSeaCages(fromPin) {
   hideAll(); state.where = 'cages'; state.cagesMode = true;
   setCrumb([crumbCampus(), { k: 'crCages' }, { k: 'crC03' }]); setNav('cages');
-  veilSwap(() => {
+  const begin = () => {
     useWorld(EXT); setLevel(5, 'lv5'); extSway = 0;
     document.querySelectorAll('.lc-step').forEach((s, i) => { s.classList.toggle('done', i < 3); s.classList.toggle('on', i === 3); });
-    place(V(-60, 70, 20), V(120, 0, -80), 46);
-    fly([V(90, 55, -30), V(260, 38, -60), V(372, 24, -86)], [V(300, 0, -110), V(400, 0, -118), V(414, -1, -124)], 6.2, 'power1.inOut', { fov: 42 });
-    gsap.delayedCall(4.2, () => { showHotspots(true); selectHS('c03'); offerDetail('cage'); });
-  });
+    if (fromPin) {
+      fly([V(300, 36, -90), V(390, 22, -110)], [V(400, 0, -118), V(414, -1, -124)], 2.8, 'power2.inOut', { fov: 42, sway: 0 });
+      gsap.delayedCall(1.8, () => { showHotspots(true); selectHS('c03'); offerDetail('cage'); });
+    } else {
+      place(V(-60, 70, 20), V(120, 0, -80), 46);
+      fly([V(90, 55, -30), V(260, 38, -60), V(372, 24, -86)], [V(300, 0, -110), V(400, 0, -118), V(414, -1, -124)], 6.2, 'power1.inOut', { fov: 42, sway: 0 });
+      gsap.delayedCall(4.2, () => { showHotspots(true); selectHS('c03'); offerDetail('cage'); });
+    }
+  };
+  if (fromPin && W === EXT) begin(); else veilSwap(begin);
   syncHome();
 }
 function diveCage() {
@@ -320,17 +355,35 @@ function showEnd() {
 }
 
 // ---------------- UI wiring ----------------
-function onHotspot(id) {
-  if (id === 'brood') enterBroodstock();
-  else if (id === 'hatch') goHatchery();
-  else if (id === 'labs') { selectHS(id); const h = HS.find(x => x.id === id); fly([V(h.pos.x - 80, 60, h.pos.z + 90)], [h.pos.clone().setY(G + 4)], 2.6, 'power2.inOut', { onComplete: openPhase1 }); }
-  else if (id === 'ras') { selectHS(id); const h = HS.find(x => x.id === id); fly([V(h.pos.x - 80, 60, h.pos.z + 90)], [h.pos.clone().setY(G + 4)], 2.6); toast('toastRas', 4); }
-  else if (id === 'dome') { hide('#intro'); selectHS(id); const h = HS.find(x => x.id === id); fly([V(h.pos.x - 90, 105, h.pos.z + 100)], [h.pos.clone().setY(G + 6)], 2.6, 'power2.inOut', { fov: 40 }); toast('toastDome', 4); }
-  else if (id === 'cages') goSeaCages();
-  else if (id === 'c03') diveCage();
-  else if (id === 'l3t6') larvaeCloseUp();
+const CAMPUS_IDS = ['phase1', 'hatch', 'brood', 'ras', 'dome', 'cages'];
+function flyToCampus(id) {
+  if (mode === 'orbit') { rig.pos.copy(camera.position).add(W.offset); rig.tgt.copy(controls.target).add(W.offset); }
+  const h = HS.find(x => x.id === id);
+  if (!h) return;
+  selectHS(id);
+  const path = campusApproach(
+    { x: rig.pos.x, y: rig.pos.y, z: rig.pos.z },
+    { x: rig.tgt.x, y: rig.tgt.y, z: rig.tgt.z },
+    { x: h.pos.x, y: h.pos.y, z: h.pos.z }, id
+  );
+  const P = p => V(p.x, p.y, p.z);
+  fly([P(path.mid), P(path.end)], [P(path.lookMid), P(path.look)], path.dur, 'power2.inOut', {
+    fov: path.fov, sway: 0, onComplete() {
+      if (id === 'phase1' || id === 'labs') openPhase1();
+      else if (id === 'hatch') goHatchery();
+      else if (id === 'brood') enterBroodstock(true);
+      else if (id === 'cages') goSeaCages(true);
+      else if (id === 'ras') toast('toastRas', 4);
+      else if (id === 'dome') toast('toastDome', 4);
+    }
+  });
 }
-// Laboratories opens the hosted Phase 1 ground-floor sheet. No new campus pin.
+function onHotspot(id) {
+  if (id === 'l3t6') larvaeCloseUp();
+  else if (id === 'c03') diveCage();
+  else if (CAMPUS_IDS.includes(id) || id === 'labs') flyToCampus(id);
+}
+// Phase 1 opens the hosted ground-floor sheet from the laboratories building.
 const planView = { s: 1, fit: 1, x: 0, y: 0, drag: null };
 const planPts = new Map();
 let planPinch = null;
@@ -483,7 +536,7 @@ async function boot() {
     step(0); render(); window.__ready = true;
   } else {
     let last = performance.now();
-    const loop = now => { const rd = (now - last) / 1000; last = now; adapt(rd); step(Math.min(rd, 1 / 20)); render(); requestAnimationFrame(loop); };
+    const loop = now => { const rd = Math.max(0, (now - last) / 1000); last = now; adapt(rd); step(Math.min(rd, 1 / 20)); render(); requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
   }
 }
