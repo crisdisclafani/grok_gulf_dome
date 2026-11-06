@@ -155,6 +155,9 @@ html[dir=rtl] .hs .hl b{font-family:'Noto Naskh Arabic';font-size:17px}
 .hs .hl span,.fishtag .hl span{font-size:11px;color:var(--muted);letter-spacing:.03em}
 .hs .ln{width:26px;height:1px;background:var(--gold2);margin:0 -6px}
 .hs.l{flex-direction:row-reverse}
+.hs.phase1 i{width:26px;height:26px;background:var(--gold);border-color:var(--ivory);box-shadow:0 0 0 8px rgba(179,146,87,.55),0 0 0 18px rgba(251,248,242,.3)}
+.hs.phase1 .hl{border-color:var(--gold2)}
+.hs.phase1 .hl b{font-size:22px}
 .fishtag{visibility:hidden;opacity:0;z-index:11}
 .fishtag i{display:none}
 

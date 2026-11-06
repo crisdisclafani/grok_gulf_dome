@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { canvasTex, ribNormal, boxUV, noiseTex } from './common.js';
+import { G, LABS, dropSeabed, landHeight, shoreX } from './campus-nav.js';
 
-export const G = 1.6; // compound ground level
-export const shoreX = z => 70 + 18 * Math.sin(z / 140) + 8 * Math.sin(z / 53 + 1);
+export { G, shoreX };
 export const CAGES = [[360, -170], [410, -170], [360, -120], [410, -120], [360, -70], [410, -70]];
 export const HERO_CAGE = new THREE.Vector3(410, 0, -120);
 export const CAGE_R = 13;
@@ -57,11 +57,10 @@ export function buildExterior(renderer) {
   const c = new THREE.Color();
   for (let i = 0; i < tp.count; i++) {
     const x = tp.getX(i), z = tp.getZ(i), d = shoreX(z) - x;
-    let h = G * THREE.MathUtils.smoothstep(d, -6, 30) - 3.5 * (1 - THREE.MathUtils.smoothstep(d, -90, -2));
+    const h = landHeight(x, z);
     const far = THREE.MathUtils.smoothstep(d, 120, 420);
     const dn = (Math.sin(x * .011 + z * .004) * Math.sin(z * .013 - x * .002) + .5 * Math.sin(x * .031 + 2) * Math.sin(z * .027)) * 6;
-    if (!inCompound(x, z)) h += far * Math.max(-1, dn) * (z > -300 || x < -300 ? 1 : 1);
-    tp.setY(i, h);
+    tp.setY(i, dropSeabed(h));
     c.copy(sand).lerp(dune, Math.max(0, dn / 8) * far);
     if (inCompound(x, z) && d > 8) c.copy(grade);
     c.lerp(wet, 1 - THREE.MathUtils.smoothstep(d, 0, 10));
@@ -104,8 +103,8 @@ export function buildExterior(renderer) {
         vec3 R=reflect(-V,N); R.y=abs(R.y);
         vec3 col=base*(.45+.55*max(dot(N,uSun),0.));
         col=mix(col,skyCol(R,0.)*.85,fr*.55);
-        float sp=pow(max(dot(R,uSun),0.),120.);
-        col+=vec3(1.,.95,.85)*(sp*.65+pow(max(dot(R,uSun),0.),24.)*.035);
+        float sp=pow(max(dot(R,uSun),0.),6.);
+        col+=vec3(1.,.95,.85)*sp*.18;
         col=mix(col,uHaze,1.-exp(-dist*.00028));
         gl_FragColor=vec4(col,1.);
         #include <tonemapping_fragment>
@@ -113,6 +112,7 @@ export function buildExterior(renderer) {
       }`
   });
   water.toneMapped = false; // composer OutputPass does tone mapping; keep linear here
+  water.polygonOffset = true; water.polygonOffsetFactor = -4; water.polygonOffsetUnits = -4;
   const sea = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000, 1, 1).rotateX(-Math.PI / 2), water);
   sea.position.set(1500, 0, 0); scene.add(sea);
 
@@ -152,7 +152,7 @@ export function buildExterior(renderer) {
   shed(-5, 10, 70, 26, 10, { doors: [-25, 0, 25] });
   shed(-5, 42, 70, 26, 10, { doors: [-25, 0, 25] });
   // laboratories (window bands) & RAS building
-  shed(-120, -110, 52, 60, 9, { windows: [2.4, 6.2] });
+  shed(LABS.x, LABS.z, 52, 60, 9, { windows: [2.4, 6.2] });
   shed(-115, 10, 42, 42, 11, { doors: [-8, 8] });
   // wave-roof building
   {
@@ -272,7 +272,7 @@ export function buildExterior(renderer) {
   const hotspots = [
     { id: 'hatch', pos: new THREE.Vector3(-10, G + 17, -95), key: 'hsHatch', sub: 'hsHatchS' },
     { id: 'brood', pos: new THREE.Vector3(-5, G + 15, 26), key: 'hsBrood', sub: 'hsBroodS' },
-    { id: 'labs', pos: new THREE.Vector3(-120, G + 14, -110), key: 'hsLabs', sub: 'hsLabsS' },
+    { id: 'phase1', pos: new THREE.Vector3(LABS.x, G + 20, LABS.z), key: 'hsPhase1', sub: 'hsLabs' },
     { id: 'ras', pos: new THREE.Vector3(-115, G + 16, 10), key: 'hsRas', sub: 'hsRasS' },
     { id: 'dome', pos: new THREE.Vector3(domeX, G + 17, domeZ), key: 'hsDome', sub: 'hsDomeS' },
     { id: 'cages', pos: new THREE.Vector3(385, 8, -120), key: 'hsCages', sub: 'hsCagesS' },
