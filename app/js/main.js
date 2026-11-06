@@ -6,6 +6,7 @@ import { buildExterior, HERO_CAGE } from './exterior.js';
 import { CAMERA_CLEARANCE, CAMPUS_MAX_DISTANCE, CAMPUS_MIN_DISTANCE, campusApproach, constrainCampusCamera, surfaceY } from './campus-nav.js';
 import { buildBrood } from './brood.js';
 import { buildHatch, HERO_TANK, HATCH_APPROACH } from './hatch.js';
+import { buildPhase1, PHASE1_APPROACH, LARVAL_FOCUS, LARVAL_VIEW } from './phase1.js';
 import { buildUnder } from './under.js';
 import { STR } from './i18n.js';
 
@@ -18,8 +19,9 @@ let T = 0; // app clock (seconds) — drives GSAP, shaders, fish: identical in l
 const EXT = buildExterior(renderer);
 const BRD = buildBrood(renderer, TIER);
 const HAT = buildHatch(renderer, TIER, camera);
+const P1 = buildPhase1(renderer, TIER);
 const UND = buildUnder(renderer, TIER);
-EXT.offset = V(0, 0, 0); BRD.offset = V(0, 0, 0); HAT.offset = V(0, 0, 0); UND.offset = HERO_CAGE.clone();
+EXT.offset = V(0, 0, 0); BRD.offset = V(0, 0, 0); HAT.offset = V(0, 0, 0); P1.offset = V(0, 0, 0); UND.offset = HERO_CAGE.clone();
 let W = EXT;
 function useWorld(w) { W = w; setWorld(w); bokeh.enabled = false; buildHotspots(w === EXT ? (state.cagesMode ? EXT.cageHotspots : EXT.hotspots) : w.hotspots); }
 
@@ -58,17 +60,17 @@ function applyCampusConstraint() {
 }
 function startOrbit() {
   if (DEMO || CAPTURE || mode !== 'rig') return;
-  const hatch = W === HAT;
+  const hall = W === HAT || W === P1;
   bindControls();
   mode = 'orbit';
   controls.target.copy(rig.tgt).sub(W.offset);
   camera.position.copy(rig.pos).sub(W.offset);
   camera.lookAt(controls.target);
   controls.enabled = true;
-  controls.minDistance = W === EXT ? CAMPUS_MIN_DISTANCE : hatch ? 1.6 : 1;
-  controls.maxDistance = W === EXT ? CAMPUS_MAX_DISTANCE : hatch ? 40 : 25;
-  controls.minPolarAngle = hatch ? 0.32 : 0.08;
-  controls.maxPolarAngle = W === EXT ? 1.42 : hatch ? 1.58 : Math.PI;
+  controls.minDistance = W === EXT ? CAMPUS_MIN_DISTANCE : hall ? 1.6 : 1;
+  controls.maxDistance = W === EXT ? CAMPUS_MAX_DISTANCE : hall ? (W === P1 ? 48 : 40) : 25;
+  controls.minPolarAngle = hall ? 0.32 : 0.08;
+  controls.maxPolarAngle = W === EXT ? 1.42 : hall ? 1.58 : Math.PI;
   if (W === EXT) applyCampusConstraint();
   controls.update();
 }
@@ -100,7 +102,6 @@ function applyLang(l) {
   document.querySelectorAll('[data-th]').forEach(e => e.innerHTML = t(e.dataset.th));
   document.querySelectorAll('#langToggle button').forEach(b => b.classList.toggle('on', b.dataset.l === l));
   $('#btnLangCard').innerHTML = l === 'ar' ? '<span>EN</span>' : '<span class="ar">عربي</span>';
-  $('#planImg').alt = t('phase1Title');
   buildHotspots(currentHS); renderCrumb(); renderLevel(); setPP(pp, true); syncDetailCopy();
 }
 
@@ -165,7 +166,8 @@ const shown = new Set();
 function show(sel, from = { y: 18 }, d = 0) { const el = $(sel); shown.add(sel); el.style.pointerEvents = 'auto'; gsap.killTweensOf(el); return gsap.fromTo(el, { autoAlpha: 0, x: 0, y: 0, ...from }, { autoAlpha: 1, x: 0, y: 0, duration: .8, delay: d, ease: 'power3.out' }); }
 function hide(sel, d = 0) { const el = $(sel); shown.delete(sel); el.style.pointerEvents = 'none'; gsap.killTweensOf(el); return gsap.to(el, { autoAlpha: 0, duration: .35, delay: d, ease: 'power2.in' }); }
 function hideAll(except = []) { [...shown].forEach(s => { if (!except.includes(s)) hide(s); }); clearDetail(); }
-const DETAIL = { tank: { title: 'crL3T6', panel: '#tank' }, cage: { title: 'crC03', panel: '#cages' }, fish: { title: 'fishCard', panel: '#card' } };
+const DETAIL = { tank: { title: 'crL3T6', panel: '#tank' }, cage: { title: 'crC03', panel: '#cages' }, fish: { title: 'fishCard', panel: '#card' }, phase1: { title: 'phase1Title', panel: '#phase1' } };
+const DETAIL_PANELS = ['#tank', '#cages', '#card', '#phase1'];
 let detailKind = null, detailOpen = false, tankCounted = false;
 function syncDetailCopy() {
   if (!detailKind || !$('#detailChip')) return;
@@ -177,14 +179,14 @@ function clearDetail() {
   detailKind = null; detailOpen = false; const chip = $('#detailChip');
   if (!chip) return;
   chip.hidden = true; chip.classList.remove('open'); chip.setAttribute('aria-expanded', 'false');
-  ['#tank', '#cages', '#card'].forEach(s => { if (shown.has(s)) hide(s); });
+  DETAIL_PANELS.forEach(s => { if (shown.has(s)) hide(s); });
 }
 function offerDetail(kind) {
   const chip = $('#detailChip');
   if (detailKind === kind && chip && !chip.hidden) { syncDetailCopy(); return; }
   detailKind = kind; detailOpen = false;
   chip.hidden = false; chip.classList.remove('open'); chip.setAttribute('aria-expanded', 'false');
-  ['#tank', '#cages', '#card'].forEach(s => { if (shown.has(s)) hide(s); });
+  DETAIL_PANELS.forEach(s => { if (shown.has(s)) hide(s); });
   syncDetailCopy();
 }
 function toggleDetail() {
@@ -354,6 +356,21 @@ function showEnd() {
   gsap.fromTo('.end-inner > *', { y: 22, opacity: 0 }, { y: 0, opacity: 1, duration: 1.1, stagger: .14, delay: 1.1, ease: 'power3.out' });
 }
 
+// Phase 1 ground floor: a built interior, entered after the campus fly-to.
+function enterPhase1() {
+  hideAll(); selectHS('phase1'); state.where = 'phase1';
+  setCrumb([crumbCampus(), { k: 'crPhase1' }]); setLevel(2, 'lvPhase1'); setNav('facilities');
+  veilSwap(() => {
+    useWorld(P1);
+    const A = MOBILE ? PHASE1_APPROACH.mobile : PHASE1_APPROACH.desktop;
+    const V3 = a => V(a[0], a[1], a[2]);
+    place(V3(A.place), V3(A.look), A.fov0);
+    fly(A.pts.map(V3), A.tgts.map(V3), PHASE1_APPROACH.dur, 'power2.inOut', { fov: A.fov1, sway: .45 });
+    showHotspots(true);
+  });
+  syncHome();
+}
+
 // ---------------- UI wiring ----------------
 const CAMPUS_IDS = ['phase1', 'hatch', 'brood', 'ras', 'dome', 'cages'];
 function flyToCampus(id) {
@@ -369,7 +386,7 @@ function flyToCampus(id) {
   const P = p => V(p.x, p.y, p.z);
   fly([P(path.mid), P(path.end)], [P(path.lookMid), P(path.look)], path.dur, 'power2.inOut', {
     fov: path.fov, sway: 0, onComplete() {
-      if (id === 'phase1' || id === 'labs') openPhase1();
+      if (id === 'phase1' || id === 'labs') enterPhase1();
       else if (id === 'hatch') goHatchery();
       else if (id === 'brood') enterBroodstock(true);
       else if (id === 'cages') goSeaCages(true);
@@ -380,69 +397,19 @@ function flyToCampus(id) {
 }
 function onHotspot(id) {
   if (id === 'l3t6') larvaeCloseUp();
+  else if (id === 'larval') larvalCloseUp();
   else if (id === 'c03') diveCage();
   else if (CAMPUS_IDS.includes(id) || id === 'labs') flyToCampus(id);
 }
-// Phase 1 opens the hosted ground-floor sheet from the laboratories building.
-const planView = { s: 1, fit: 1, x: 0, y: 0, drag: null };
-const planPts = new Map();
-let planPinch = null;
-function drawPlan() { $('#planImg').style.transform = `translate(${planView.x}px,${planView.y}px) scale(${planView.s})`; }
-function clampPlan(s) { return Math.min(2.5, Math.max(planView.fit || .05, s)); }
-function fitPlan() {
-  const img = $('#planImg'), stage = $('#planStage');
-  const nw = img.naturalWidth || 1, nh = img.naturalHeight || 1;
-  planView.fit = Math.min((stage.clientWidth - 28) / nw, (stage.clientHeight - 28) / nh);
-  planView.s = planView.fit;
-  planView.x = (stage.clientWidth - nw * planView.s) / 2;
-  planView.y = (stage.clientHeight - nh * planView.s) / 2;
-  drawPlan();
-}
-function zoomPlan(factor) {
-  const stage = $('#planStage'), mx = stage.clientWidth / 2, my = stage.clientHeight / 2;
-  const next = clampPlan(planView.s * factor), k = next / planView.s;
-  planView.x = mx - (mx - planView.x) * k; planView.y = my - (my - planView.y) * k; planView.s = next; drawPlan();
-}
-function openPhase1() {
-  const el = $('#plan'); el.hidden = false;
-  const img = $('#planImg');
-  if (img.complete && img.naturalWidth) fitPlan();
-}
-function closePhase1() { $('#plan').hidden = true; planPts.clear(); planView.drag = null; planPinch = null; }
-$('#planImg').addEventListener('load', () => { if (!$('#plan').hidden) fitPlan(); });
-$('#planClose').onclick = closePhase1;
-$('#planIn').onclick = () => zoomPlan(1.25);
-$('#planOut').onclick = () => zoomPlan(1 / 1.25);
-addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#plan').hidden) closePhase1(); });
-addEventListener('resize', () => { if (!$('#plan').hidden) fitPlan(); });
-{ const stage = $('#planStage');
-  stage.addEventListener('wheel', e => {
-    if ($('#plan').hidden) return;
-    e.preventDefault();
-    const r = stage.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
-    const next = clampPlan(planView.s * (e.deltaY < 0 ? 1.12 : 1 / 1.12)), k = next / planView.s;
-    planView.x = mx - (mx - planView.x) * k; planView.y = my - (my - planView.y) * k; planView.s = next; drawPlan();
-  }, { passive: false });
-  stage.addEventListener('pointerdown', e => {
-    planPts.set(e.pointerId, { x: e.clientX, y: e.clientY }); stage.setPointerCapture(e.pointerId);
-    if (planPts.size === 1) { planView.drag = { x: e.clientX, y: e.clientY, ox: planView.x, oy: planView.y }; stage.classList.add('dragging'); }
-    else if (planPts.size === 2) { planView.drag = null; const [a, b] = [...planPts.values()]; planPinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, s: planView.s, x: planView.x, y: planView.y, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; }
-  });
-  stage.addEventListener('pointermove', e => {
-    if (!planPts.has(e.pointerId)) return;
-    planPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (planPts.size === 2 && planPinch) {
-      const [a, b] = [...planPts.values()], d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
-      const next = clampPlan(planPinch.s * d / planPinch.d), r = stage.getBoundingClientRect();
-      const mx = planPinch.mx - r.left, my = planPinch.my - r.top, k = next / planPinch.s;
-      planView.s = next; planView.x = mx - (mx - planPinch.x) * k; planView.y = my - (my - planPinch.y) * k; drawPlan();
-    } else if (planView.drag && planPts.size === 1) {
-      planView.x = planView.drag.ox + e.clientX - planView.drag.x; planView.y = planView.drag.oy + e.clientY - planView.drag.y; drawPlan();
-    }
-  });
-  const up = e => { planPts.delete(e.pointerId); if (planPts.size < 2) planPinch = null; if (!planPts.size) { planView.drag = null; stage.classList.remove('dragging'); } };
-  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
-  stage.addEventListener('dblclick', fitPlan);
+function larvalCloseUp() {
+  showHotspots(false);
+  offerDetail('phase1');
+  const h = LARVAL_FOCUS, view = LARVAL_VIEW;
+  fly(
+    [V(h.x - 4.2, 2.55, -0.12), V(view.x, MOBILE ? view.y + 0.32 : view.y, view.z)],
+    [V(h.x, 1.12, h.z * 0.4), V(h.x, MOBILE ? 1.02 : 0.9, h.z)],
+    3.2, 'power2.inOut', { fov: MOBILE ? 42 : 34, sway: .2 }
+  );
 }
 $('#homeBtn').onclick = () => goCampus();
 $('#detailChip').onclick = () => toggleDetail();
@@ -524,7 +491,7 @@ async function boot() {
   gsap.updateRoot(0); console.log('gsap t0', gsap.globalTimeline.time());
   applyLang('en');
   // warm up every world once so shader compilation does not stall the first transition
-  for (const w of [BRD, HAT, UND, EXT]) { useWorld(w); w.update(0, 0, camera); renderer.compile(w.scene, camera); render(); }
+  for (const w of [BRD, HAT, P1, UND, EXT]) { useWorld(w); w.update(0, 0, camera); renderer.compile(w.scene, camera); render(); }
   useWorld(EXT); applyCamera(0);
   $('#loading').style.display = 'none';
   goCampus(); gsap.to(veil, { opacity: 0, duration: 1.4, ease: 'power2.out', delay: .1 });

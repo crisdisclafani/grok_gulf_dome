@@ -37,8 +37,16 @@ test('language and detail labels exist in English and Arabic', () => {
   }
 });
 
-test('laboratories still open the Phase 1 sheet instead of a standing box', () => {
+test('laboratories enter the Phase 1 interior with the campus control, not a plan viewer', () => {
   const labs = main.split("id === 'labs'")[1].split('else if')[0];
-  assert.match(labs, /openPhase1/);
-  assert.match(html, /id="plan" hidden/);
+  assert.match(labs, /enterPhase1/);
+  assert.doesNotMatch(html, /id="plan"/);
+  const entry = main.slice(main.indexOf('function enterPhase1'), main.indexOf('const CAMPUS_IDS'));
+  assert.match(entry, /syncHome\(\)/);
+  assert.match(entry, /useWorld\(P1\)/);
+  assert.doesNotMatch(entry, /offerDetail|show\('#phase1'/);
+  const drill = main.slice(main.indexOf('function larvalCloseUp'), main.indexOf('function liveValues'));
+  assert.match(drill, /offerDetail\('phase1'\)/);
+  assert.match(main, /phase1: \{ title: 'phase1Title', panel: '#phase1' \}/);
+  assert.match(main, /detailOpen = false/);
 });
