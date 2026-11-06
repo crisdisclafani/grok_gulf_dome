@@ -26,12 +26,12 @@ test('Phase 1 pin is on the laboratories building and is labeled Phase 1', () =>
   const fly = main.slice(main.indexOf('function flyToCampus'), main.indexOf('function onHotspot'));
   assert.match(fly, /campusApproach/);
   assert.match(fly, /sway: 0/);
-  assert.match(fly, /if \(id === 'phase1' \|\| id === 'labs'\) openPhase1\(\)/);
+  assert.match(fly, /if \(id === 'phase1' \|\| id === 'labs'\) enterPhase1\(\)/);
 });
 
 test('every first-level campus pin flies to that point before entering it', () => {
   const fly = main.slice(main.indexOf('function flyToCampus'), main.indexOf('function onHotspot'));
-  const click = main.slice(main.indexOf('function onHotspot'), main.indexOf('function openPhase1'));
+  const click = main.slice(main.indexOf('function onHotspot'), main.indexOf('function larvalCloseUp'));
   assert.match(click, /flyToCampus\(id\)/);
   for (const id of ['phase1', 'hatch', 'brood', 'ras', 'dome', 'cages']) {
     assert.match(fly, new RegExp(`id === '${id}'`));
